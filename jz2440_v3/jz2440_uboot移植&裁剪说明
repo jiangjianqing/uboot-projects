@@ -1,0 +1,29 @@
+s3c2440属于arm920t cpu
+网卡：dm9000
+
+
+make distclean
+make smdk2410_defconfig
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- 
+
+
+arch
+    仅保留arm目录
+arch/arm/cpu/
+    仅保留arm920t 目录
+board/
+    全部清空
+configs
+    删除所有文件
+
+
+#uboot-2019.1 不能使用老版本的arm-linux-gcc 4.4.3进行编译
+Your GCC is older than 6.0 and is not supported
+
+#arch/arm/lib/Makefile 替换为2017.05的对应文件，可解决下面问题
+arch/arm/lib/div64.S: Assembler messages:
+arch/arm/lib/div64.S:91: Error: bad instruction `subscs r1,r1,r2'
+arch/arm/lib/div64.S:92: Error: bad instruction `movsne ip,ip,lsr#1'
+scripts/Makefile.build:314: recipe for target 'arch/arm/lib/div64.o' failed
+
+
