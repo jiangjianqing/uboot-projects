@@ -73,7 +73,11 @@
 #define CONFIG_CMD_BSP
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_NAND
-#define CONFIG_CMD_REGINFO
+
+/*
+*uboot 2019.01 cmd/reginfo.c 与uboot 2017.05中的不同，要么从2017.05中copy，要么屏蔽该命令
+*#define CONFIG_CMD_REGINFO
+*/
 
 #define CONFIG_CMDLINE_EDITING
 
