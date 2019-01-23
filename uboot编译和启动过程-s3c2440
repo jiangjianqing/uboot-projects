@@ -1,0 +1,169 @@
+#现状：
+2019.01.16:最新版本的gcc-arm-none-eabi-8-2018-q4-major同样能够编译arm-linux-gcc的项目，以后都使用最新的gcc-arm-none-eabi-xxx即可
+最后带2440驱动的是u-boot-2017.05
+从u-boot-2017.07开始， 已经移除了2440芯片的相关源码。研究imx6比较好
+
+安装交叉编译工具
+vim ~/.bashrc
+export PATH=$PATH:/opt/FriendlyARM/toolschain/4.4.3/bin
+export PATH=$PATH:/opt/gcc-arm-none-eabi-8-2018-q4-major/bin
+
+#依赖项:用arm-linux-gcc 4.4.3 编译提示缺少libz.so.1
+sudo apt-get install lib32z1
+
+#u-boot-2016.11编译命令（使用arm-linux-gcc 4.4.3,不支持-std=gnu11）
+#u-boot-2016.11自带2410配置文件 从2017.1的版本中已经不存在
+make smdk2410_defconfig O=../objs/u-boot-2016.11-obj
+make menuconfig
+    #Command Line interface -> Use  hush shell    [disable]  #开启命令行, hushshell是从文件中解析命令并执行
+    #Device Drivers         -> Generic Driver Options -> Enable Driver Model  开启驱动模型
+    #Device Tree Control    -> Run-time configuration via Device Tree [enable]  #当前编译无法通过
+make ARCH=arm CROSS_COMPILE=arm-linux-
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- 
+
+#u-boot-2019.01编译命令（使用gcc-arm-none-eabi-8-2018-q4-major,因为uboot的高版本中使用了-std=gnu11 ， ）
+make ARCH=arm CROSS_COMPILE=arm-none-eabi-
+
+
+uboot env变量说明：
+bootcmd --  短命令为m,对应命令处理源码为bootm.c
+bootargs -- 放在ATAG_CMDLINE中递给linux kernel
+
+
+#uboot 基本编译变量查看
+grep -rn "\-Ttext" *   #查看链接基地址，确认与韦东山的教程不一样，是通过CONFIG_SYS_TEXT_BASE ，而不是以前的TEXT_BASE
+
+#uboot执行顺序
+arch/arm/cpu/arm920t/start.S   #从reset 地址开始执行，进行下面两个最基本操作后，开始调用板级初始化汇编代码段 lowlevel_init
+    1、set the cpu to SVC32 mode
+	2、relocate exception table
+
+    bl	cpu_init_crit       #arm系列都不能定义该宏来跳过cpu初始化（包括板级初始化）  #ifndef CONFIG_SKIP_LOWLEVEL_INIT   。。。。。。。
+
+c_runtime_cpu_setup:
+	mov	pc, lr
+cpu_init_crit：              #注意：这段代码与c_runtime_cpu_setup共享
+    xxx
+	mov	ip, lr          
+	bl	lowlevel_init       ##arm系列都不能定义该宏来跳过板级初始化  ifndef CONFIG_SKIP_LOWLEVEL_INIT_ONLY
+	mov	lr, ip
+	mov	pc, lr          #返回到调用位置继续执行,
+    
+
+arch/arm/lib/crt0.S            #提供ENTRY(_main),是32位汇编代码，还存在一个crt0_64.S,用于64位环境
+    ENTRY(_main)
+            xxx
+	    ldr	r0, =(CONFIG_SYS_INIT_SP_ADDR)  # CONFIG_SYS_INIT_SP_ADDR =	(CONFIG_SYS_SDRAM_BASE + 0x1000 - GENERATED_GBL_DATA_SIZE)
+	    bic	r0, r0, #7	/* 8-byte alignment for ABI compliance */
+	    mov	sp, r0
+        bl	board_init_f_alloc_reserve
+#common/init/board_init.c
+            board_init_f_alloc_reserve( CONFIG_SYS_INIT_SP_ADDR )
+        mov	sp, r0                      #sp指向gd地址，向下分配
+	    /* set up gd here, outside any C code */
+	    mov	r9, r0                      #r9被专用于保存gd地址
+        bl	board_init_f_init_reserve()
+#common/init/board_init.c
+        board_init_f_init_reserve(ulong base)   #从base指向的地址（上面传来的sp地址）
+
+        mov	r0, #0
+        bl	board_init_f
+#board_f.c:343:	/* reserve TLB table */ 确定用的是board_f.c
+#common/board_f.c                #第一阶段初始化，提供board_init_f函数，初始化函数指针数组
+            board_init_f
+
+            reserve_mmu         #gd重定位计算
+               。。。
+            reserve_malloc      #预留stack空间
+            reserve_board
+            #以上代码都是在从内存的高地址向下分配预留的空间
+            xxxx
+
+        #重定位代码开始  在这里韦东山讲的不正确，uboot 2019.01中并没有走到jump_to_copy那部分代码（对arm平台无效，只有那里才使用到了arch/arm/lib/relocate.S：relocate_code函数，包括__rel_dyn_start等等数据的使用，那是针对linux elf格式的x86系统的），那里使用的relocate_code函数需要3个参数    
+ 
+        ldr	r0, [r9, #GD_RELOCADDR]		/* r0 = gd->relocaddr */#arm并没有在common/board_r.c进行jump_to_copy,那部分代码为x86准备
+        b	relocate_code(ulong)        #arm平台的relocate_code函数只有一个参数,其他平台的都有3个参数，在include/common.h中对relocate_code进行了c语言声明
+#arch/arm/lib/relocate.S
+            ENTRY(relocate_code)        #该代码只适合nor flash，而nand flash的代码远远比这个复杂
+                                                #1、将代码从__image_copy_start 复制到r0寄存器(gd->start_addr_sp)指向的位置
+                                                #2、根据 r4（relocation offset） 修正__rel_dyn_start到__rel_dyn_end这部分的elf根式数据                  
+        bl	relocate_vectors
+#arch/arm/lib/relocate.S
+            ENTRY(relocate_vectors)
+        bl	c_runtime_cpu_setup       
+cpu_init_crit：              #第二次执行 cpu_init_crit代码  注意：这段代码与c_runtime_cpu_setup共享
+            xxx
+        clbss_l:    清空bss段
+            xxx
+
+        b board_init_r
+#common/board_r.c                #第二阶段初始化 ， 供board_init_r 等函数,提供init_sequence_r 初始化函数指针数组,最后一个任务run_main_loop进入主函数 main_loop
+            board_init_r(gd,gd->#GD_RELOCADDR)
+                #此处会出现spl.c也提供了提供board_init_r函数，但可以忽略spl的内容，见下面关于spl的描述。
+                lib/initcall.c                  #提供initcall_run_list 函数执行一个函数指针数组(上面的init_sequence_r)
+                    #DECLARE_GLOBAL_DATA_PTR  #这句将gd变量与r9寄存器进行了关联，即gd数据都从r9所指的地址访问。
+                    run_main_loop(...)
+        #    jump_to_copy    #调用relocate_code完成uboot从flash向dram的copy
+        #        relocate_code(gd->start_addr_sp 【r0】, gd->new_gd 【r1】, gd->relocaddr【r2】);，其中r1、r2并没有用上
+#common/main.c                   #提供main_loop函数，从此处开始进入c语言开发
+            main_loop
+                cli_loop()          #获取用户输入的命令并执行
+
+uboot通过cmd进行具体的动作，所以输入bootm后进行linux kernel的启动工作
+#arch/arm/lib/bootm.c
+do_bootm_states()
+    boot_fn = bootm_os_get_boot_func()      #获得linux kernel启动入口地址，boot_fn = do_bootm_linux
+    boot_fn(BOOTM_STATE_OS_PREP,...)        #重点：准备linux系统需要的atag数据
+    boot_selected_os(...,boot_fn)           #通过回调的方式启动操作系统,即下面的do_bootm_linux
+
+do_bootm_linux()            #负责启动linux的函数
+    |case for BOOTM_STATE_OS_PREP
+    boot_prep_linux()        #重要：准备linux需要的atags数据
+    |case for BOOTM_STATE_OS_GO
+    |default:
+    boot_jump_linux()       #跳转到linux内核，接下来就是内核的工作范畴了
+
+#uboot-spl说明
+uboot分为uboot-spl和uboot两个组成部分。SPL是Secondary Program Loader的简称，第二阶段程序加载器，这里所谓的第二阶段是相对于SOC中的BROM来说的,BROM会通过检测启动方式来加载第二阶段bootloader。uboot已经是一个bootloader了，那么为什么还多一个uboot spl呢？这个主要原因是对于一些SOC来说，它的内部SRAM可能会比较小，小到无法装载下一个完整的uboot镜像，那么就需要spl，它主要负责初始化外部RAM和环境，并加载真正的uboot镜像到外部RAM中来执行。
+所以由此来看，SPL应该是一个非常小的loader程序，可以运行于SOC的内部SRAM中，它的主要功能就是加载真正的uboot并运行之。
+
+
+
+若是uboot路径被移动过，则可能出现错误
+
+uboot第一阶段工作
+
+设置中断向量表
+
+设置处理器为svc模式
+
+刷新I/D cache
+
+关闭MMU和cache
+
+关闭看门狗
+
+关闭所有中断
+
+初始化系统时钟
+
+初始化串口
+
+初始化nand flash
+
+内存初始化
+
+复制nand flash中bootloader到内存
+
+设置堆栈
+
+清除bss段
+
+uboot第二阶段工作
+
+初始化串口
+初始化lcd
+初始化网卡
+初始化led
+
+执行用户输入命令
