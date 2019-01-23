@@ -40,8 +40,8 @@ arch/arm/cpu/arm920t/start.S   #从reset 地址开始执行，进行下面两个
 
     bl	cpu_init_crit       #arm系列都不能定义该宏来跳过cpu初始化（包括板级初始化）  #ifndef CONFIG_SKIP_LOWLEVEL_INIT   。。。。。。。
 
-c_runtime_cpu_setup:
-	mov	pc, lr
+c_runtime_cpu_setup:        #仅有一行代码,表示2440(arm920t)下该函数为空
+	mov	pc, lr              #返回到调用位置继续执行
 cpu_init_crit：              #注意：这段代码与c_runtime_cpu_setup共享
     xxx
 	mov	ip, lr          
@@ -90,9 +90,11 @@ arch/arm/lib/crt0.S            #提供ENTRY(_main),是32位汇编代码，还存
         bl	relocate_vectors
 #arch/arm/lib/relocate.S
             ENTRY(relocate_vectors)
-        bl	c_runtime_cpu_setup       
-cpu_init_crit：              #第二次执行 cpu_init_crit代码  注意：这段代码与c_runtime_cpu_setup共享
-            xxx
+        bl	c_runtime_cpu_setup    
+   
+#arch/arm/cpu/arm920t/start.S
+            c_runtime_cpu_setup:        #仅有一行代码,表示2440(arm920t)下该函数为空，不会再执行后续cpu_init_crit部分的代码
+	            mov	pc, lr              #返回到调用位置继续执行
         clbss_l:    清空bss段
             xxx
 
