@@ -19,7 +19,7 @@ make menuconfig
     #Device Drivers         -> Generic Driver Options -> Enable Driver Model  开启驱动模型
     #Device Tree Control    -> Run-time configuration via Device Tree [enable]  #当前编译无法通过
 make ARCH=arm CROSS_COMPILE=arm-linux-
-make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- 
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf-  V=1               #V=1可以让make显示详细命令信息
 
 #u-boot-2019.01编译命令（使用gcc-arm-none-eabi-8-2018-q4-major,因为uboot的高版本中使用了-std=gnu11 ， ）
 make ARCH=arm CROSS_COMPILE=arm-none-eabi-
