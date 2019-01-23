@@ -18,7 +18,7 @@
  * (easy to change)
  */
 #define CONFIG_S3C24X0		/* This is a SAMSUNG S3C24x0-type SoC */
-#define CONFIG_S3C2440		/* specifically a SAMSUNG S3C2440 SoC */
+#define CONFIG_S3C2410		/* specifically a SAMSUNG S3C2410 SoC */
 #define CONFIG_JZ2440		/* on a SAMSUNG SMDK2410 Board */
 /*
 include/configs/jz2440.h:23:1: error: C++ style comments are not allowed in ISO C90
@@ -76,10 +76,8 @@ include/configs/jz2440.h:23:1: error: C++ style comments are not allowed in ISO 
 #define CONFIG_CMD_BSP
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_NAND
-/*
-*solve:cmd/reginfo.c:9:10: fatal error: asm/ppc.h: No such file or directory
-*#define CONFIG_CMD_REGINFO
-*/
+#define CONFIG_CMD_REGINFO
+
 #define CONFIG_CMDLINE_EDITING
 
 /* autoboot */

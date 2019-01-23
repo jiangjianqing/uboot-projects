@@ -1,0 +1,60 @@
+s3c2440属于arm920t cpu
+网卡：dm9000
+
+
+make distclean
+make jz2440_defconfig
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- 
+
+#天嵌uboot新增了一个board.c文件，需要将其调整
+arch/arm/lib/board.c            #arm使用这个文件完成启动 2019.1.21发现
+    board_init_r()
+
+arch
+    仅保留arm目录
+arch/arm/cpu/
+    仅保留arm920t 目录
+board/
+    全部清空
+configs
+    全部清空
+include/configs
+    全部清空
+
+MPLL从board_early_init_f函数移动到start.S , 否则启动开发板无反应
+
+#uboot-2019.1 不能使用老版本的arm-linux-gcc 4.4.3进行编译
+Your GCC is older than 6.0 and is not supported
+
+#arch/arm/lib/Makefile 替换为2017.05的对应文件，可解决下面问题
+arch/arm/lib/div64.S: Assembler messages:
+arch/arm/lib/div64.S:91: Error: bad instruction `subscs r1,r1,r2'
+arch/arm/lib/div64.S:92: Error: bad instruction `movsne ip,ip,lsr#1'
+scripts/Makefile.build:314: recipe for target 'arch/arm/lib/div64.o' failed
+
+
+#反汇编uboot，用于确定某值，比如CONFIG_SYS_INIT_SP_ADDR
+arm-linux-gnueabihf-objdump -D u-boot >u-boot.dis
+
+#if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_STACK)
+	ldr	r0, =(CONFIG_SPL_STACK)
+#else
+	ldr	r0, =(CONFIG_SYS_INIT_SP_ADDR)
+#endif
+    688: r0=      30000f50
+bic	r0, r0, #7	/* 8-byte alignment for ABI compliance */ 
+mov	sp, r0
+sp = 30000f80
+
+
+#gcc编译参数 -ffixed-r8
+-ffixed-r8      #让编译器不要使用r8寄存器，该寄存器永远保存着gd数据指针
+#ld链接参数 -pie 生成位置无关的可执行代码
+arm-linux-ld --help | grep pie
+  -pie, --pic-executable      Create a position independent executable
+注意：加上-pie选项后，lds文件中的.rel和.dynsym才会生成！！！
+
+uboot默认的链接地址为0，可以通过反汇编查看第一句语句的地址来确定。
+复制到哪里？任选。
+复制过去后，为什么还能执行？
+    修改代码，改变里面的地址,使用新地址.
