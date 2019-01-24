@@ -41,25 +41,28 @@ include/configs/jz2440.h:23:1: error: C++ style comments are not allowed in ISO 
 /*
 #define CONFIG_DRIVER_DM9000
 */
+
 /*
  * select serial console configuration
  */
-#define CONFIG_S3C24X0_SERIAL
-#define CONFIG_SERIAL1		1	/* we use SERIAL 1 on SMDK2410 */
+
+#define CONFIG_SERIAL1			/* we use SERIAL 1 on SMDK2410 */
 
 /************************************************************
  * USB support (currently only works with D-cache off)
  ************************************************************/
+/*
 #define CONFIG_USB_OHCI
 #define CONFIG_USB_OHCI_S3C24XX
 #define CONFIG_DOS_PARTITION
+*/
 
 /************************************************************
  * RTC
  ************************************************************/
+/*
 #define CONFIG_RTC_S3C24X0
-
-#define CONFIG_BAUDRATE		115200
+*/
 
 /*
  * BOOTP options
@@ -82,11 +85,14 @@ include/configs/jz2440.h:23:1: error: C++ style comments are not allowed in ISO 
 *solve:cmd/reginfo.c:9:10: fatal error: asm/ppc.h: No such file or directory
 *#define CONFIG_CMD_REGINFO
 */
+/*
 #define CONFIG_CMDLINE_EDITING
-
+*/
 /* autoboot */
+/*
 #define CONFIG_BOOT_RETRY_TIME	-1
 #define CONFIG_RESET_TO_RETRY
+*/
 
 #define CONFIG_NETMASK		255.255.255.0
 #define CONFIG_IPADDR		10.0.0.110
@@ -113,9 +119,11 @@ include/configs/jz2440.h:23:1: error: C++ style comments are not allowed in ISO 
 #define CONFIG_SYS_LOAD_ADDR		0x30800000
 
 /* support additional compression methods */
+/*去掉该部分减少了90k大小
 #define CONFIG_BZIP2
 #define CONFIG_LZO
 #define CONFIG_LZMA
+*/
 
 /*-----------------------------------------------------------------------
  * Physical Memory Map
