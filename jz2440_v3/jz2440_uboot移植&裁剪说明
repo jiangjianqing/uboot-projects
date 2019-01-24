@@ -1,10 +1,9 @@
 s3c2440属于arm920t cpu
 网卡：dm9000
 
-
-make distclean
-make jz2440_defconfig
-make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- 
+减少bin文件大小的办法：
+    1、include/configs/jz2440.h   中移除所有附加的压缩方法和命令
+    2、configs/jz2440_defconfig   屏蔽所有不需要的命令
 
 #天嵌uboot新增了一个board.c文件，需要将其调整
 arch/arm/lib/board.c            #arm使用这个文件完成启动 2019.1.21发现
