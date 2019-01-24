@@ -1,0 +1,68 @@
+天嵌IMX6官方给的uboot版本为2015.04
+
+#编译前准备工作：
+include/linux/compiler-gcc.h    #更新为uboot-2019.01中同名文件的内容，因为原来的版本中只支持到了gcc5
+
+#编译：
+运行./build.sh进行编译
+
+官方删除了很多内容，当前看到的是cmd目录都没了。
+
+
+
+
+#天嵌uboot新增了一个board.c文件，需要将其调整
+arch/arm/lib/board.c            #arm使用这个文件完成启动 2019.1.21发现
+    board_init_r()
+该文件混合了common/board_r.c和common/board_f.c两个文件的内容
+
+#而标准uboot处理方式为：
+common/board_r.c                #提供board_init_r 等函数,提供init_sequence_r 初始化函数指针数组,最后一个任务run_main_loop进入主函数 main_loop
+    #此处会出现spl.c也提供了提供board_init_r函数，但可以忽略spl的内容，见下面关于spl的描述。
+    lib/initcall.c                  #提供initcall_run_list 函数执行一个函数指针数组(上面的init_sequence_r)
+        #DECLARE_GLOBAL_DATA_PTR  #这句将gd变量与r9寄存器进行了关联，即gd数据都从r9所指的地址访问。
+        main_loop(...)
+
+
+arch/arm/lib/board.c
+
+
+
+1、根据项目需要，参与项目整体软件方案评审和开发，
+2、Linux驱动方案设计，MCU方案设计，驱动及中间层功能开发，
+3、U-boot、Linux的BSP移植、修改，
+4、系统性能优化与整体方案改进，
+5、外部设备功能调试及优化。
+
+2、对LINUX内核有深入理解，熟悉device tree，device driver架构，熟悉内核驱动模块开发，了解内核与用户空间通讯机制，
+3、熟悉常见的通讯接口，I2C，SPI，I2S等，掌握基本的使用方法，
+4、有一定硬件基础，能看懂原理图，使用示波器，万用表等，
+5. 有Camera驱动及framework经验优先，有海思平台经验者优先。
+
+一、开启驱动开发之路
+
+1、驱动开发的准备工作
+
+(1)正常运行linux系统的开发板。要求开发板中的linux的zImage必须是自己编译的，不能是别人编译的。原因在于在安装模块的时候会进行安全性校验
+
+(2)内核源码树，其实就是一个经过了配置编译之后的内核源码。我们需要内核源码编译自己的模块
+
+(3)nfs挂载的rootfs，主机ubuntu中必须搭建一个nfs服务器。这对于驱动开发前期是不可或缺的，能够提高我们的开发效率。
+
+2、驱动开发的步骤
+
+(1)驱动源码编写、Makefile编写、编译
+
+(2)insmod装载模块、测试、rmmod卸载模块
+
+3、实践
+
+(1)copy原来提供的x210kernel.tar.bz2，找一个干净的目录（/root/driver），解压之，并且配置编译。编译完成后得到了：1、内核源码树。2、编译ok的zImage
+
+(2)fastboot将第1步中得到的zImage烧录到开发板中去启动（或者将zImage丢到tftp的共享目录，uboot启动时tftp下载启动），将来驱动编译好后，就可以在这个内核中去测
+
+试。因为这个zImage和内核源码树是一伙的，所以驱动安装时版本校验不会出错。
+
+我一般都会选择通过uboot启动之后使用tftp去下载主机服务器端共享目录中的zImage镜像文件，而不直接将zImage镜像文件烧入到Flash中，因为可能我们在开发驱动的过程
+
+中会重新对内核进行配置编译，然后让开发板去启动这个新编译好的内核镜像文件，如果这样重复烧flash就比较麻烦了，效率也不高。

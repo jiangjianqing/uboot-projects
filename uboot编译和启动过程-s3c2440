@@ -32,6 +32,7 @@ bootargs -- 放在ATAG_CMDLINE中递给linux kernel
 
 #uboot 基本编译变量查看
 grep -rn "\-Ttext" *   #查看链接基地址，确认与韦东山的教程不一样，是通过CONFIG_SYS_TEXT_BASE ，而不是以前的TEXT_BASE
+通过链接脚本知道： . = 0x00000000;同时-Ttext 0x0，由此我们知道是从NOR flash开始运行，通过链接脚本还知道第一个运行的是arch/arm/cpu/arm920t/start.s
 
 #uboot执行顺序
 arch/arm/cpu/arm920t/start.S   #从reset 地址开始执行，进行下面两个最基本操作后，开始调用板级初始化汇编代码段 lowlevel_init
@@ -131,41 +132,4 @@ uboot分为uboot-spl和uboot两个组成部分。SPL是Secondary Program Loader�
 
 
 
-若是uboot路径被移动过，则可能出现错误
 
-uboot第一阶段工作
-
-设置中断向量表
-
-设置处理器为svc模式
-
-刷新I/D cache
-
-关闭MMU和cache
-
-关闭看门狗
-
-关闭所有中断
-
-初始化系统时钟
-
-初始化串口
-
-初始化nand flash
-
-内存初始化
-
-复制nand flash中bootloader到内存
-
-设置堆栈
-
-清除bss段
-
-uboot第二阶段工作
-
-初始化串口
-初始化lcd
-初始化网卡
-初始化led
-
-执行用户输入命令
