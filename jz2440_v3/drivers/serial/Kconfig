@@ -1,0 +1,163 @@
+#
+# Serial device configuration
+#
+
+menu "Serial drivers"
+
+config BAUDRATE
+	int "Default baudrate"
+	default 115200
+	help
+	  Select a default baudrate, where "default" has a driver-specific
+	  meaning of either setting the baudrate for the early debug UART
+	  in the SPL stage (most drivers) or for choosing a default baudrate
+	  in the absence of an environment setting (serial_mxc.c).
+
+config REQUIRE_SERIAL_CONSOLE
+	bool "Require a serial port for console"
+	# Running without a serial console is not supported by the
+	# non-dm serial code
+	depends on DM_SERIAL
+	default y
+	help
+	  Require a serial port for the console, and panic if none is found
+	  during serial port initialization (default y). Set this to n on
+	  boards which have no debug serial port whatsoever.
+
+config SPECIFY_CONSOLE_INDEX
+	bool "Specify the port number used for console"
+	default y if !DM_SERIAL || (SPL && !SPL_DM_SERIAL) || \
+		(TPL && !TPL_DM_SERIAL)
+	help
+	  In various cases, we need to specify which of the UART devices that
+	  a board or SoC has available are to be used for the console device
+	  in U-Boot.
+
+config SERIAL_PRESENT
+	bool "Provide a serial driver"
+	depends on DM_SERIAL
+	default y
+	help
+	  In very space-constrained devices even the full UART driver is too
+	  large. In this case the debug UART can still be used in some cases.
+	  This option enables the full UART in U-Boot, so if is it disabled,
+	  the full UART driver will be omitted, thus saving space.
+
+config SPL_SERIAL_PRESENT
+	bool "Provide a serial driver in SPL"
+	depends on DM_SERIAL
+	default y
+	help
+	  In very space-constrained devices even the full UART driver is too
+	  large. In this case the debug UART can still be used in some cases.
+	  This option enables the full UART in SPL, so if is it disabled,
+	  the full UART driver will be omitted, thus saving space.
+
+config TPL_SERIAL_PRESENT
+	bool "Provide a serial driver in TPL"
+	depends on DM_SERIAL
+	default y
+	help
+	  In very space-constrained devices even the full UART driver is too
+	  large. In this case the debug UART can still be used in some cases.
+	  This option enables the full UART in TPL, so if is it disabled,
+	  the full UART driver will be omitted, thus saving space.
+
+# Logic to allow us to use the imply keyword to set what the default port
+# should be.  The default is otherwise 1.
+config CONS_INDEX_0
+	bool
+
+config CONS_INDEX_2
+	bool
+
+config CONS_INDEX_3
+	bool
+
+config CONS_INDEX_4
+	bool
+
+config CONS_INDEX_5
+	bool
+
+config CONS_INDEX_6
+	bool
+
+config CONS_INDEX
+	int "UART used for console"
+	depends on SPECIFY_CONSOLE_INDEX
+	range 0 6
+	default 0 if CONS_INDEX_0
+	default 2 if CONS_INDEX_2
+	default 3 if CONS_INDEX_3
+	default 4 if CONS_INDEX_4
+	default 5 if CONS_INDEX_5
+	default 6 if CONS_INDEX_6
+	default 1
+	help
+	  Set this to match the UART number of the serial console.
+
+config DM_SERIAL
+	bool "Enable Driver Model for serial drivers"
+	depends on DM
+	help
+	  Enable driver model for serial. This replaces
+	  drivers/serial/serial.c with the serial uclass, which
+	  implements serial_putc() etc. The uclass interface is
+	  defined in include/serial.h.
+
+config SERIAL_RX_BUFFER
+	bool "Enable RX buffer for serial input"
+	depends on DM_SERIAL
+	help
+	  Enable RX buffer support for the serial driver. This enables
+	  pasting longer strings, even when the RX FIFO of the UART is
+	  not big enough (e.g. 16 bytes on the normal NS16550).
+
+config SERIAL_RX_BUFFER_SIZE
+	int "RX buffer size"
+	depends on SERIAL_RX_BUFFER
+	default 256
+	help
+	  The size of the RX buffer (needs to be power of 2)
+
+config SERIAL_SEARCH_ALL
+	bool "Search for serial devices after default one failed"
+	depends on DM_SERIAL
+	help
+	  The serial subsystem only searches for a single serial device
+	  that was instantiated, but does not check whether it was probed
+	  correctly. With this option set, we make successful probing
+	  mandatory and search for fallback serial devices if the default
+	  device does not work.
+
+	  If unsure, say N.
+
+config SPL_DM_SERIAL
+	bool "Enable Driver Model for serial drivers in SPL"
+	depends on DM_SERIAL && SPL_DM
+	default y
+	help
+	  Enable driver model for serial in SPL. This replaces
+	  drivers/serial/serial.c with the serial uclass, which
+	  implements serial_putc() etc. The uclass interface is
+	  defined in include/serial.h.
+
+config TPL_DM_SERIAL
+	bool "Enable Driver Model for serial drivers in TPL"
+	depends on DM_SERIAL
+	default y if TPL && DM_SERIAL
+	help
+	  Enable driver model for serial in TPL. This replaces
+	  drivers/serial/serial.c with the serial uclass, which
+	  implements serial_putc() etc. The uclass interface is
+	  defined in include/serial.h.
+
+
+config S3C24X0_SERIAL
+	bool "Enable S3C24X0 SoCs on-chip UART Support"
+	help
+	  If you have a machine based on a S3C24X0 SOC
+	  you can enable its onboard serial ports, say Y to this option.
+	  If unsure, say N.
+endmenu

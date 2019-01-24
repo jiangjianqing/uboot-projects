@@ -1,0 +1,28 @@
+config DM_ETH
+	bool "Enable Driver Model for Ethernet drivers"
+	depends on DM
+	help
+	  Enable driver model for Ethernet.
+
+	  The eth_*() interface will be implemented by the UCLASS_ETH class
+	  This is currently implemented in net/eth-uclass.c
+	  Look in include/net.h for details.
+
+menuconfig NETDEVICES
+	bool "Network device support"
+	depends on NET
+	default y if DM_ETH
+	help
+	  You must select Y to enable any network device support
+	  Generally if you have any networking support this is a given
+
+	  If unsure, say Y
+
+if NETDEVICES
+
+config DRIVER_DM9000
+	bool "Enable DM9000 support"
+	help
+	  Enables support for DM9000 100M eth card.
+
+endif # NETDEVICES

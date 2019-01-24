@@ -38,10 +38,9 @@ include/configs/jz2440.h:23:1: error: C++ style comments are not allowed in ISO 
 /*
  * Hardware drivers
  */
-#define CONFIG_CS8900		/* we have a CS8900 on-board */
-#define CONFIG_CS8900_BASE	0x19000300
-#define CONFIG_CS8900_BUS16	/* the Linux driver does accesses as shorts */
-
+/*
+#define CONFIG_DRIVER_DM9000
+*/
 /*
  * select serial console configuration
  */
@@ -73,9 +72,12 @@ include/configs/jz2440.h:23:1: error: C++ style comments are not allowed in ISO 
 /*
  * Command line configuration.
  */
+/*
 #define CONFIG_CMD_BSP
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_NAND
+*/
+
 /*
 *solve:cmd/reginfo.c:9:10: fatal error: asm/ppc.h: No such file or directory
 *#define CONFIG_CMD_REGINFO
@@ -168,12 +170,14 @@ include/configs/jz2440.h:23:1: error: C++ style comments are not allowed in ISO 
 /*
  * File system
  */
+/*
 #define CONFIG_CMD_UBIFS
 #define CONFIG_CMD_MTDPARTS
 #define CONFIG_MTD_DEVICE
 #define CONFIG_MTD_PARTITIONS
 #define CONFIG_YAFFS2
 #define CONFIG_RBTREE
+*/
 
 /* additions for new relocation code, must be added to all boards */
 #define CONFIG_SYS_SDRAM_BASE	PHYS_SDRAM_1
