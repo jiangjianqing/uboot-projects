@@ -20,6 +20,10 @@ configs
     全部清空
 include/configs
     全部清空
+drivers/net
+    全部清空
+drivers/serial
+    全部清空
 
 MPLL从board_early_init_f函数移动到start.S , 否则启动开发板无反应
 
