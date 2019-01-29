@@ -92,7 +92,10 @@ static int serial_init_dev(const int dev_index)
 	struct s3c24x0_uart *uart = s3c24x0_get_base_uart(dev_index);
 
 	/* FIFO enable, Tx/Rx FIFO clear */
+	writel(0x0, &uart->ufcon);
+	/*old:
 	writel(0x07, &uart->ufcon);
+	*/
 	writel(0x0, &uart->umcon);
 
 	/* Normal,No parity,1 stop,8 bit */
@@ -101,7 +104,10 @@ static int serial_init_dev(const int dev_index)
 	 * tx=level,rx=edge,disable timeout int.,enable rx error int.,
 	 * normal,interrupt or polling
 	 */
+	/*old:
 	writel(0x245, &uart->ucon);
+	*/
+	writel(0x5, &uart->ucon);
 
 	_serial_setbrg(dev_index);
 
