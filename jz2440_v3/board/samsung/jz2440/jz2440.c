@@ -14,32 +14,9 @@
 #include <asm/io.h>
 #include <asm/arch/s3c24x0_cpu.h>
 #include <asm/mach-types.h>
+#include "soc_clock.h"
 
 DECLARE_GLOBAL_DATA_PTR;
-
-#define FCLK_SPEED 1
-
-#if (FCLK_SPEED == 0)		/* Fout = 203MHz, Fin = 12MHz for Audio */
-#define M_MDIV	0xC3
-#define M_PDIV	0x4
-#define M_SDIV	0x1
-#elif (FCLK_SPEED == 1)		/* Fout = 202.8MHz */
-#define M_MDIV	0xA1
-#define M_PDIV	0x3
-#define M_SDIV	0x1
-#endif
-
-#define USB_CLOCK 1
-
-#if (USB_CLOCK == 0)
-#define U_M_MDIV	0xA1
-#define U_M_PDIV	0x3
-#define U_M_SDIV	0x1
-#elif (USB_CLOCK == 1)
-#define U_M_MDIV	0x48
-#define U_M_PDIV	0x3
-#define U_M_SDIV	0x2
-#endif
 
 static inline void pll_delay(unsigned long loops)
 {
@@ -58,24 +35,47 @@ int board_early_init_f(void)
 					s3c24x0_get_base_clock_power();
 	struct s3c24x0_gpio * const gpio = s3c24x0_get_base_gpio();
 
+#if !defined(INIT_USE_LOWLEVEL_ASM) || (INIT_USE_LOWLEVEL_ASM != 1)
+
+	/*设置分频系数 1:4:8*/
+	writel(0x5,&clk_power->clkdivn);
+
+	/*开启“asynchronous bus mode”*/
+	unsigned int cr_val = get_cr();
+	cr_val |= 0xc0000000;
+	set_cr(cr_val);
+
+	/*>>>>设置MPLL倍频值。它应该要在设置分频系数和初始化内存控制器之间来设置
+	 *>>>>这里的初始化部分都移到lowlevel_init.S中用汇编实现
+	 */
+
 	/* to reduce PLL lock time, adjust the LOCKTIME register */
+	/*
 	writel(0xFFFFFF, &clk_power->locktime);
+	*/
 
 	/* configure MPLL */
 	writel((M_MDIV << 12) + (M_PDIV << 4) + M_SDIV,
 	       &clk_power->mpllcon);
-
 	/* some delay between MPLL and UPLL */
+	/*
 	pll_delay(4000);
+	*/
 
 	/* configure UPLL */
+	/*
 	writel((U_M_MDIV << 12) + (U_M_PDIV << 4) + U_M_SDIV,
 	       &clk_power->upllcon);
+	*/
 
 	/* some delay between MPLL and UPLL */
+	/*
 	pll_delay(8000);
-
+	*/
+#endif
 	/* set up the I/O ports */
+
+	/*
 	writel(0x007FFFFF, &gpio->gpacon);
 	writel(0x00044555, &gpio->gpbcon);
 	writel(0x000007FF, &gpio->gpbup);
@@ -89,9 +89,17 @@ int board_early_init_f(void)
 	writel(0x000000FF, &gpio->gpfup);
 	writel(0xFF95FFBA, &gpio->gpgcon);
 	writel(0x0000FFFF, &gpio->gpgup);
-	writel(0x002AFAAA, &gpio->gphcon);
-	writel(0x000007FF, &gpio->gphup);
-
+	*/
+	int gphcon_val = 0xa0;
+	/*
+	gphcon_val = 2<<6 | 2<<4;
+	*/
+	writel(gphcon_val, &gpio->gphcon);
+	int gphup_val = 0xc;
+	/*
+	int gphup_val = ~(1<<2 | 1<<3);
+	*/
+	writel(gphup_val, &gpio->gphup);
 	return 0;
 }
 
