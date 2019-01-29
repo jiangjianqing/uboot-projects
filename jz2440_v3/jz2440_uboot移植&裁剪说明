@@ -1,5 +1,9 @@
-s3c2440属于arm920t cpu
-网卡：dm9000
+板子上的基本资源：
+    s3c2440A属于arm920t cpu
+    板载晶振12MHZ
+    主时钟源和 USB 时钟源都是晶振
+    dm9000网卡
+    3个串口，串口1并接了usb芯片便于调试输出
 
 减少bin文件大小的办法：
     1、include/configs/jz2440.h   中移除所有附加的压缩方法和命令
@@ -28,6 +32,9 @@ drivers/watchdog
 
 #drivers/serial/serial_s3c24x0.c : serial_init_dev : 90
 关闭fifo的串口通讯参数
+串口设置要点：
+　　　　GPHUP：  由于JZ2440的串口采用TTL标准，所以一开始应该是高电位，需要将相应引脚的电位上拉
+　　　　　　　　　这里往GPHUP寄存的的bit3和bit2里写入1，即可完成设置。
 
 
 #arch/arm/lib/Makefile 替换为2017.05的对应文件，可解决下面问题
@@ -35,6 +42,47 @@ arch/arm/lib/div64.S: Assembler messages:
 arch/arm/lib/div64.S:91: Error: bad instruction `subscs r1,r1,r2'
 arch/arm/lib/div64.S:92: Error: bad instruction `movsne ip,ip,lsr#1'
 scripts/Makefile.build:314: recipe for target 'arch/arm/lib/div64.o' failed
+
+名词解释
+PLL 锁相环
+FCLK (CPU时钟)  HCLK(AHB时钟) PCLK(APB时钟) UCLK(USB时钟) CAMCLK(camera时钟)
+
+芯片手册：
+
+<step 1>:
+CLKDIVN P260 (Clock divider control register 重要，必须设置) 分频系数
+DIVN_UPLL(usb专用) HDIVN   PDIVN  CAMDIVN(camera专用) 设置 P260
+
+<step 2>
+设置分频系数后，HDIVN!=0则需要开启"asynchronous bus mode”   P244
+FCLK is used by ARM920T.
+HCLK is used for AHB bus, which is used by the ARM920T, the memory controller, the interrupt controller, the
+LCD controller, the DMA and USB host block.
+PCLK is used for APB bus, which is used by the peripherals such as WDT, IIS, I2C, PWM timer, MMC interface,
+ADC, UART, GPIO, RTC and SPI.
+
+If HDIVN is not 0, the CPU bus mode has to be changed from the fast bus mode to the asynchronous
+bus mode using following instructions(S3C2440 does not support synchronous bus mode).
+
+
+<step 3>:
+PLL设置  --- 非常重要  P256
+        Fin(晶振频率)    Fout               MDIV        PDIV    SDIV
+MPLL:12.0000MHz     400.00 MHz          92(0x5c)        1       1     
+UPLL:12.0000MHz     48.00 MHz (Note)    56(0x38)        2       2     *DIVN_UPLL 设为 0
+UPLL:12.0000MHz     96.00 MHz (Note)    56(0x38)        2       1     *DIVN_UPLL 设为 1
+NOTE: The 48.00MHz and 96MHz output is used for UPLLCON register.
+将上述MDIV PDIV SDIV配置到对应的寄存器MPLLCON & UPLLCON P256 即可完成基本的clock设置。 
+
+CLKCON  P257 (Clock generator control register 重要，当前使用默认值即可)用于控制是否向特定设备输出时钟,默认值为0xFFFFF0
+用于确定FCLK HCLK PCLK UCLK CAMCLK
+
+UART 波特率计算  P338 搜索关键词：UBRDIVn
+
+
+UPLL:
+USB host interface and USB device interface needs 48Mhz clock. In the S3C2440A, the USB dedicated PLL
+(UPLL) generates 48Mhz for USB. UCLK does not fed until the PLL (UPLL) is configured.
 
 
 
