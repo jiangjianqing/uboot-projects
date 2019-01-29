@@ -75,7 +75,6 @@ NOTE: The 48.00MHz and 96MHz output is used for UPLLCON register.
 将上述MDIV PDIV SDIV配置到对应的寄存器MPLLCON & UPLLCON P256 即可完成基本的clock设置。 
 
 CLKCON  P257 (Clock generator control register 重要，当前使用默认值即可)用于控制是否向特定设备输出时钟,默认值为0xFFFFF0
-用于确定FCLK HCLK PCLK UCLK CAMCLK
 
 UART 波特率计算  P338 搜索关键词：UBRDIVn
 
