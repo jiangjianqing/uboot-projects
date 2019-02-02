@@ -3,13 +3,6 @@
 最后带2440驱动的是u-boot-2017.05
 从u-boot-2017.07开始， 已经移除了2440芯片的相关源码。研究imx6比较好
 
-#tftp启动服务
-sudo service tftpd-hpa restart
-
-安装交叉编译工具
-vim ~/.bashrc
-export PATH=$PATH:/opt/FriendlyARM/toolschain/4.4.3/bin
-export PATH=$PATH:/opt/gcc-arm-none-eabi-8-2018-q4-major/bin
 
 #依赖项:用arm-linux-gcc 4.4.3 编译提示缺少libz.so.1
 sudo apt-get install lib32z1

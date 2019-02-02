@@ -1,0 +1,99 @@
+2018年我在忙着开发一个类似VS的开发工具，其中一些关于仿真调试的地方我想借鉴Linux、GCC技术链的方案，于是借此机会学习一下arm嵌入式开发。
+开发板我选择了韦东山老师的jz2440，选择的原因是配套资料比较多，包括书、视频等，遇到问题好解决。
+鉴于jz2440上的s3c2440A比较老，我又另外购买了一块imx6q开发板，用于后续的持续学习。
+我把整个学习规划成2个阶段：
+    1、基础学习，目标是以通过uboot启动kernel并加载NFS rootfs，rootfs由busybox编译生成
+        a）jz2440移植uboot、kernel，通过nfs完成mini-rootfs的启动  这个资料多
+        b)imx6q移植jz2440相同的内容 
+    2、持续深入学习嵌入式驱动，重点是触摸屏、RTC驱动
+        a)jz2440完成设备树及驱动的学习
+        b)embedded-qt移植
+        b)imx6q深入学习
+    3、jffs2、yaffs2文件系统的生成、烧写等
+        这个阶段独立出来并且还留到最后进行，是因为其并非属于开发过程中的非必须项，使用nfs进行开发更加高效!
+        截止2019.02.02,用jffs2制作的rootfs还没有在jz2440上成功启动过。
+        yaffs2还没有在uboot和kernel中官方支持，所以暂时不考虑。
+
+经过大概一个月的学习后，我完成了第一阶段jz2440的基础学习，下面对该阶段进行总结。
+下面开始对该学习之旅进行总结。
+
+开发机环境介绍：
+网络环境：
+    gateway:192.168.0.1
+    netmask:255.255.255.0
+笔记本：linux mint 19.1     IP:192.168.0.104
+    修改、编译代码统统都在该本基本上进行。
+    作为tftp和nfs服务器,为开发板网络下载提供支持。
+        **nfs服务器要进行配置，使其支持旧的NFS2、3协议！这与kernel的NFS编译选项密切相关！
+    gcc编译器：
+        uboot+kernel : gcc-linaro-7.3.1-2018.05-x86_64_arm-linux-gnueabihf   我一向喜欢用最新的编译工具
+        busybox      : FriendlyARM/toolschain/4.4.3     (gcc-linaro-7.3.1编译生成busybox-rootfs无法从NFS启动，后面异常解决部分会有介绍)
+            **用于解决kernel启动错误：Kernel panic - not syncing: Attempted to kill init!
+台式机：win10               IP:192.168.0.103
+    按照韦东山老师的教程安装完所有的驱动，包括串口驱动、EOP调试器驱动等，确保可用。
+    这里需要注意一点：一定要更新oflash的版本，我是在使用EOP下载uboot时，发现老是下载失败，才发现了该问题，新的版本我是跟淘宝店家要的，韦东山老师亲自给我发了新版本1.5.6！
+    win10系统只有在两个必须使用EOF下载器进行下载的时候有用：
+        a）开始移植uboot时,此时还没有移植好网卡驱动
+        b) 后期意外将uboot分区清除时，
+开发板：jz2440 v3           IP:192.168.0.123
+    淘宝店的标准配置，为了省钱我是从咸鱼上收的一套比较新的。
+
+路线图：
+    1、以smdk2410_defconfig为模板开始，将uboot移除所有命令、，然后做到最小化编译成功
+    2、正确配置memory controller、时钟总线频率，确保串口1输出正确，进入命令行环境
+    3、uboot加入nor flash驱动支持，在uboot启动中看到nor flash的容量:2MiB
+    4、uboot加入2440_nand驱动支持,在uboot启动中看到nand flash的容量：256MiB，以能够正确读写nand为结束
+        **这里找了很多资料，最终参考一篇文章，确认了符合自己要求的修改方案。
+    5、uboot加入mtdparts相关命令支持，配置好mtdids表和mtdparts分区表，以能够正确按照分区的方式对nand进行读写为结束。
+        **mtdids和mtdparts最终都会通过cmdline传给内核，这样内核代码中就不需要再对nand进行分却，从根本上确保了uboot和kernel中分区的一致性
+    6、熟悉env的配置、代码中配置好默认环境变量，熟悉env default xxx等常用调试命令
+    7、加入DM9000网卡驱动支持，加入tftp nfs 命令,确保用tftp命令可以下载文件到内存
+        **uboot中对DM9000的驱动还仅限于能够下载文件（开发机无法ping通开发板），跟操作系统中的网卡驱动完全不是一个概念，
+    8、uboot中加入upupdate-kernel变量，能够通过run运行，完成用tftp将新的u-boot.bin下载、烧入nor flash、reset重启开发板
+    9、编译kernel，选择能够支持s3c2440的board（MINI2440）
+        **一定要加入File System\Net File System中一定要加入对nfs2\3\4的所有支持，否则可能会遇到
+   10、通过tftp将kernel下载到内存，通过bootm命令启动，以看到串口1正确输出为结束。 
+    --
+   11、uboot加入环境变量update-kernel,能够通过run运行，完成用nfs将新的uImage下载、烧入nand的kernel分区，确认能够从nand中读取kernel到sdram并完成启动
+   12、用busybox制作最小根文件系统，注意编译器的选用！！
+        **一定要用FriendlyARM系列的arm-linux-gcc完成编译，否则会有 Failed to execute /linuxrc.  Attempting defaults... 错误
+   12、uboot bootargs环境变量设置为kernel从NFS启动rootfs,启动kernel后能够顺利mount NFS，并停留在shell!!
+        **
+    至此，基于jz2440 v3的uboot+kernel+nfs+rootfs基础搭建顺利完成！
+    在此基础上，可以开始进行下一步的linux驱动的学习。
+    但我考虑是在学习驱动之前，对imx6q完成上述同样的工作，以巩固学习效果。
+    
+
+u-boot移植：
+    目标是移植uboot2019.1（当前最新），并移植方案能快速通用，而不是采用patch的方式(这样会跟具体的uboot版本进行强绑定)。
+    在uboot2019.1中已经移除了s3c2440的相关支持，所以我从2017.05版本中将smdk2410相关配置作为基础模板开始移植。
+    移植uboot分如下步骤：
+        board级配置
+        lowlevel_init.S 
+        1、关watchdog  -- 不关闭则会自动重启开发板
+        2、memory controller初始化  -- 配置每个bank的作用、参数，DM9000网卡（nGCS4）、SDRAM(nGCS 6)
+        其他硬件配置交由board_early_init_f函数完成
+
+        jz2440.c : board_early_init_f函数  注：放在这里就是为了能够用c语言进行配置
+        1、设置分频系数 CLKDIVN  此时HCLK=1
+        2、开启asynchronous bus mode
+        3、设置MPLLCON
+        4、开启串口1用于printf输出   
+
+        jz2440.c : board_init函数
+        1、设置传递给kernel的machid参数：MACH_TYPE_MINI2440，（如果不设置正确，启动内核时无法看到串口输出）
+
+        jz2440.c : board_eth_init函数
+        1、初始化DM9000网卡    
+
+kernel移植：
+    jz2440上的s3c2440A比较老，开发板上内存只有64M,所以我选择给其移植kernel官网仅在维护的最后一个kernel3.16系列(4.x系列我准备留给imx6q开发板，这样可以有个互有侧重的学习效果) 
+    对于jz2440来说，只要选择machid=7cf(mini2440)就可以正确设定串口1波特率、驱动DM9000网卡，快速以NFS rootfs的方式完成环境搭建
+    kernel的重头应该是移植各种驱动，包括触摸屏、rtc、usb等等，这一部分放到后面有序展开。    
+
+nfs开发环境搭建：
+    linux minit 19 基于ubuntu，所以参考ubuntu完成nfs的配置即可。
+    一定要注意一点：nfs服务器开启对nfs2\3协议的支持，否则kernel以nfs方式mount rootfs时，会出现unable to mount nfs的相关错误。
+
+rootfs构建:
+    用busybox编译生成的install目录就是一个rootfs的雏形，补充一定的配置后即可成为最小根文件系统，我写了一个rootfs-builder脚本来完成busybox-rootfs到mini-rootfs的构建。

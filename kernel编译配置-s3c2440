@@ -1,0 +1,24 @@
+#将uboot的mtdparts传递给nernel(重要！！)
+H. mtdparts
+mtdparts=fc000000.nor_flash:1920k(linux),128k(fdt),20M(ramdisk),4M(jffs2),38272k(user),256k(env),384k(uboot)
+要想这个参数起作用，内核中的mtd驱动必须要支持，即内核配置时需要选上Device Drivers ---> Memory Technology Device (MTD) support ---> Command line partition table parsing
+
+
+#kernel启动时加载mtd分区信息给出错误提示：
+ftl_cs: FTL header not found.
+
+解决办法：执行make menuconfig ,
+Device Drivers ->
+Memory Technology Devices (MTD) ->
+不要选择下面这三个选项
+<>FTL (Flash Translation Layer) support  //闪存转换层 详细参考http://blog.chinaunix.net/uid-24203478-id-3409428.html
+<> NFTL (NAND Flash Translation Layer) support 
+<>INFTL (Inverse NAND Flash Translation Layer) support
+
+#NFS启动rootfs报错
+VFS: Unable to mount root fs via NFS, trying floppy.
+此时，本机挂载NFS测试没有问题！！！！
+后来发现，Ubuntu 17.10 之后 nfs 默认就只支持协议3和协议4，但是 uboot 默认启动的是协议2，若想要求 nfs 支持协议2，就在/etc/default/nfs-kernel-server末尾加一句：RPCNFSDOPTS="--nfs-version 2,3,4 --debug --syslog"，然后重启一下 nfs 。大功告成！
+
+Tips. 当然也有人说可以在 uboot 的bootargs启动参数后面加nfsvers = 3，让uboot 强制按照协议3执行，不过可能是我的 uboot 版本太垃圾，不支持协议3，所以这个办法不是很好使。
+

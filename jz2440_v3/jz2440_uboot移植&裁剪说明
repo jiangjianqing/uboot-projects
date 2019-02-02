@@ -1,9 +1,17 @@
 板子上的基本资源：
     s3c2440A属于arm920t cpu
-    板载晶振12MHZ
+    板载晶振12MHZ,刚上电时CPU以该频率运行
     主时钟源和 USB 时钟源都是晶振
-    dm9000网卡
+    sdram       EM63A165TS-6G          64 MiB                               nSCS=nGCS6(0x30000000)        DW32
+    NorFlash    MX29LV160DBTI           2 MiB(1M x 16)                      nCE=nGCS0(0x00000000)        (ReadOnly,无法设置位宽)
+                cfi_flash+jedec_flash 
+    NandFlash   K9F2G08U0C            256 MiB
+    dm9000网卡   dm9000                100 MiB                                CS#=nGCS4(0x20000000)        DW16         》》》开启CONFIG_CMD_NET后参与编译
     3个串口，串口1并接了usb芯片便于调试输出
+
+注：MTD设备都使用片选引脚,访问某个设备时将该片选引脚设为低电平，其他设备的片选引脚拉为高电平!!!
+CPU访问某个内存地址(MTD设备)时，内存控制器根据内存地址的有效范围来确定哪个片选信号设为低电平。
+nGCS可用列表具体查阅 P195 MEMORY CONTROLLER
 
 减少bin文件大小的办法：
     1、include/configs/jz2440.h   中移除所有附加的压缩方法和命令
@@ -83,5 +91,12 @@ UPLL:
 USB host interface and USB device interface needs 48Mhz clock. In the S3C2440A, the USB dedicated PLL
 (UPLL) generates 48Mhz for USB. UCLK does not fed until the PLL (UPLL) is configured.
 
+<step 4>:
+设置MTD各个Bank的位宽和时序  ---非常重要 P207  
+BWSCON           这个寄存器应该是设置的位宽，
+BANKCON4（nGCS4） 这个应该是设置时序的寄存器 (**正确的时序参数能够有效提升性能**)
+
+jz2440固定项：
+BK76MAP = 0x1 (64MB/64MB)  BANK6和BANK7的大小
 
 

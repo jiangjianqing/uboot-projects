@@ -1,0 +1,30 @@
+reset halt  #复位并停在0地址
+
+mdw 0               #读取0地址数据
+
+#进行写读测试，判断内存是否可以正确访问
+mww 0x30000000 0x12345678   #在指定地址写入数据
+mdw 0x30000000      #读取2440 sdram开始位置的数据
+
+step                #单步执行
+bp 0x658  4 hw      #在0x658的位置下硬件断点
+bp                  #显示所有断点，2440只能下2个硬件断点
+rbp 0x658           #移除指定位置的断点
+resume              #恢复执行
+
+
+tftp -i 192.168.0.104 get u-boot.bin    #windows下使用tftp的命令
+
+usb 1 30000000      #usb 接收数据并写入到内存开始地址
+
+tftp 30000000 u-boot.bin
+
+#nor flash启动模式下才能对nor flash进行擦除
+protect off all     #解除Band1的保护
+erase all
+erase 0 7ffff       #earse是针对nor flash的，但是要求开发板设置为nor flash启动
+
+cp.b 30000000 0 80000   #把内存数据从内存开始地址复制到0地址，开启nor flash + 解除Band1保护时，就表示从内存复制到norflash
+
+使用nand erase 擦出整片Nand。 如果在后面给出参数可以擦除某个分区。 你使用的erase 命令是用来擦出NorFlash的,不是Nand的。
+nand write c0000000 0 40000

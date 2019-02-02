@@ -1,0 +1,207 @@
+2019.02.01:
+因为没有设置 CONFIG_ENV_IS_NOWHERE=y ，导致uboot 中找不到save命令，无法将参数保存到flash或 nand中
+
+
+2019.01.30:
+最初因为开发板没有串口输出而使用汇编仿真调试，借此机会熟悉了arm汇编。
+最终原因确认为：时钟和时序的设置问题！！！
+以后到手任何一块开发板，第一件事情就是时钟和时序设置一定要正确！！！！！！！！！！！！！！！
+
+
+
+
+1107      ed4:   e3a02efa    mov r2, #4000   ; 0xfa0
+  1108      ed8:   e2522001    subs    r2, r2, #1
+  1109      edc:   1afffffd    bne ed8 <board_early_init_f+0x18>     #pll_delay(4000);
+
+
+
+
+  1110      ee0:   e59f207c    ldr r2, [pc, #124]  ; f64 <board_early_init_f+0xa4>
+  1111      ee4:   e5832008    str r2, [r3, #8]
+	/*怀疑出错
+	writel((U_M_MDIV << 12) + (U_M_PDIV << 4) + U_M_SDIV,
+	       &clk_power->upllcon);
+	*/
+
+
+  1112      ee8:   e3a03d7d    mov r3, #8000   ; 0x1f40         
+  1113      eec:   e2533001    subs    r3, r3, #1
+  1114      ef0:   1afffffd    bne eec <board_early_init_f+0x2c>    #pll_delay(8000);
+-----------------------------------------------------------------------------------------------
+
+int board_early_init_f(void)
+{
+	struct s3c24x0_clock_power * const clk_power =
+					s3c24x0_get_base_clock_power();
+	struct s3c24x0_gpio * const gpio = s3c24x0_get_base_gpio();
+
+	/* to reduce PLL lock time, adjust the LOCKTIME register */
+	writel(0xFFFFFF, &clk_power->locktime);     
+
+	/* configure MPLL */
+	writel((M_MDIV << 12) + (M_PDIV << 4) + M_SDIV,             <<<<<<<出错汇编对应的位置
+	       &clk_power->mpllcon);
+
+	/* some delay between MPLL and UPLL */
+	pll_delay(4000);
+
+	/* configure UPLL */
+	/*怀疑出错
+	writel((U_M_MDIV << 12) + (U_M_PDIV << 4) + U_M_SDIV,
+	       &clk_power->upllcon);
+	*/
+
+	/* some delay between MPLL and UPLL */
+	pll_delay(8000);
+
+1101 00000ec0 <board_early_init_f>:
+  1102      ec0:   e3a03313    mov r3, #1275068416 ; 0x4c000000
+  1103      ec4:   e3e024ff    mvn r2, #-16777216  ; 0xff000000
+  1104      ec8:   e5832000    str r2, [r3]         [0x4c000000] = 0x00ffffff
+  1105      ecc:   e59f2084    ldr r2, [pc, #132]  ; f58 <board_early_init_f+0x98>  r2=0x000a1031
+  1106      ed0:   e5832004    str r2, [r3, #4]     [0x4c000000 + 4] = 0x000a1031       <<<<在这里就会出错，根本原因是内存访问出现问题,时钟或者频率
+  1107      ed4:   e3a03efa    mov r3, #4000   ; 0xfa0
+  1108      ed8:   e2533001    subs    r3, r3, #1
+  1109      edc:   1afffffd    bne ed8 <board_early_init_f+0x18>
+  1110      ee0:   e3a03d7d    mov r3, #8000   ; 0x1f40
+  1111      ee4:   e2533001    subs    r3, r3, #1
+  1112      ee8:   1afffffd    bne ee4 <board_early_init_f+0x24>
+
+----------------------------------------------------------------------------
+07 000029f0 <board_init_f>:
+  3008     29f0:   e3a02000    mov r2, #0
+  3009     29f4:   e92d4010    push    {r4, lr}
+  3010     29f8:   e5890004    str r0, [r9, #4]
+  3011     29fc:   e589201c    str r2, [r9, #28]
+  3012     2a00:   e59f000c    ldr r0, [pc, #12]   ; 2a14 <board_init_f+0x24>
+  3013     2a04:   eb00217b    bl  aff8 <initcall_run_list>     <<<<1、这里返回了-1，导致下面进入hangle
+  3014     2a08:   e3500000    cmp r0, #0
+  3015     2a0c:   08bd8010    popeq   {r4, pc}
+  3016     2a10:   eb003193    bl  f064 <hang>                  <<<<<<<<<<<<<2、在这里进入了hang
+  3017     2a14:   00011cf0    strdeq  r1, [r1], -r0
+
+
+
+ 12037 0000aff8 <initcall_run_list>:
+ 12038     aff8:   e92d41f0    push    {r4, r5, r6, r7, r8, lr}
+ 12039     affc:   e1a06000    mov r6, r0
+ 12040     b000:   e1a05000    mov r5, r0
+ 12041     b004:   e1a07005    mov r7, r5
+ 12042     b008:   e4950004    ldr r0, [r5], #4                     for (init_fnc_ptr = init_sequence; *init_fnc_ptr; ++init_fnc_ptr) {
+ 12043     b00c:   e3500000    cmp r0, #0                               *init_fnc_ptr ==0       <<<<这里说明r0就是目标函数地址
+ 12044     b010:   08bd81f0    popeq   {r4, r5, r6, r7, r8, pc}     
+ 12045     b014:   e5994004    ldr r4, [r9, #4]                     if (gd->flags & GD_FLG_RELOC)  <<   r4保存gd->flags的值
+ 12046     b018:   e1a03009    mov r3, r9                           [r3] == gd
+ 12047     b01c:   e2144001    ands    r4, r4, #1
+ 12048     b020:   1599404c    ldrne   r4, [r9, #76]   ; 0x4c
+ 12049     b024:   e5933004    ldr r3, [r3, #4]
+ 12050     b028:   e1a0e00f    mov lr, pc
+ 12051     b02c:   e12fff10    bx  r0                           <<<重要断点：无条件跳转到r0指向的地址，如果要看跳向哪个地址，则需要在这里下断点
+ 12052     b030:   e2503000    subs    r3, r0, #0               <<判断返回值是否=0, r0 = 0xFFFFFFED , 确认是0000a558 <env_init> 返回的错误码
+ 12053     b034:   0afffff2    beq b004 <initcall_run_list+0xc> 《《《《《返回值=0则继续循环  
+ 12054     b038:   e5972000    ldr r2, [r7]                     《《《《《《《重要断点：返回值不等于0时开始准备调用printf，并返回-1
+ 12055     b03c:   e1a01006    mov r1, r6
+ 12056     b040:   e59f000c    ldr r0, [pc, #12]   ; b054 <initcall_run_list+0x5c>
+ 12057     b044:   e0422004    sub r2, r2, r4
+ 12058     b048:   eb0016ed    bl  10c04 <printf>
+ 12059     b04c:   e3e00000    mvn r0, #0                        <<<<<<<<<<<<这里表示返回-1
+ 12060     b050:   e8bd81f0    pop {r4, r5, r6, r7, r8, pc}
+ 12061     b054:   00014342    andeq   r4, r1, r2, asr #6
+
+-------------------------------------------------------------------------
+
+11319 0000a558 <env_init>:
+ 11320     a558:   e92d41f0    push    {r4, r5, r6, r7, r8, lr}
+ 11321     a55c:   e3a05000    mov r5, #0
+ 11322     a560:   e3e04001    mvn r4, #1
+ 11323     a564:   e3a07001    mov r7, #1
+ 11324     a568:   e1a01005    mov r1, r5
+ 11325     a56c:   e3a00001    mov r0, #1
+ 11326     a570:   ebffffb8    bl  a458 <env_driver_lookup>     <<调用env_driver_lookup函数,r0 = 1, r1 = 0
+ 11327     a574:   e2506000    subs    r6, r0, #0               #r6 = r0 - 0，r0为设备驱动所在的地址，比如0x165d8
+ 11328     a578:   1a00000b    bne a5ac <env_init+0x54>          #如果r0!=0,初始化r0指向的设备
+ 11329     a57c:   e3550000    cmp r5, #0                   <<<<if (!prio) 
+ 11330     a580:   03e04012    mvneq   r4, #18              <<<<< r4 = 0xFFFFFFED   = if (!prio) return -ENODEV; -19  #define	ENODEV	19	/* No such device */
+ 11331     a584:   0a000006    beq a5a4 <env_init+0x4c>
+ 11332     a588:   e3740002    cmn r4, #2                   <<<cmn 是负值比较,r4 == -2?? if (ret == -ENOENT)  , ENOENT = 2
+ 11333     a58c:   059f204c    ldreq   r2, [pc, #76]   ; a5e0 <env_init+0x88>
+ 11334     a590:   01a03009    moveq   r3, r9
+ 11335     a594:   01a04006    moveq   r4, r6                   <<<<< r4 = r6 = 0,可r6在什么时候被置为0的呢？？ a574:哪行，编译器复用了r6寄存器
+ 11336     a598:   05832020    streq   r2, [r3, #32]              <<<gd->env_addr = (ulong)&default_environment[0];
+ 11337     a59c:   03a02001    moveq   r2, #1
+ 11338     a5a0:   05832024    streq   r2, [r3, #36]   ; 0x24     <<<gd->env_valid = ENV_VALID;
+ 11339     a5a4:   e1a00004    mov r0, r4                       <<<<<<<r0 = r4 = 0xFFFFFFED  -19 ,r0是c语言返回用的寄存器,
+ 11340     a5a8:   e8bd81f0    pop {r4, r5, r6, r7, r8, pc}     <<< return r0   确认是因为找不
+ 11341     a5ac:   e5963010    ldr r3, [r6, #16]                <<<< r3 = drv->init 
+ 11342     a5b0:   e3530000    cmp r3, #0
+ 11343     a5b4:   0a000003    beq a5c8 <env_init+0x70>         <<<< 
+ 11344     a5b8:   e1a0e00f    mov lr, pc                       <<<lr = a5c0
+ 11345     a5bc:   e12fff13    bx  r3                           <<执行drv->init()
+ 11346     a5c0:   e2504000    subs    r4, r0, #0
+ 11347     a5c4:   1a000003    bne a5d8 <env_init+0x80>
+ 11348     a5c8:   e5993028    ldr r3, [r9, #40]   ; 0x28
+ 11349     a5cc:   e5961004    ldr r1, [r6, #4]
+ 11350     a5d0:   e1833117    orr r3, r3, r7, lsl r1
+ 11351     a5d4:   e5893028    str r3, [r9, #40]   ; 0x28
+ 11352     a5d8:   e2855001    add r5, r5, #1                   <<<<prio++
+ 11353     a5dc:   eaffffe1    b   a568 <env_init+0x10>
+ 11354     a5e0:   000132f9    strdeq  r3, [r1], -r9
+
+
+ 11247 0000a458 <env_driver_lookup>:
+ 11248     a458:   e92d4010    push    {r4, lr}
+ 11249     a45c:   ebfffff5    bl  a438 <env_get_location>          <<调用env_get_location函数，r0 = 1, r1 = 0  ,返回值 r0 = lol = 4
+ 11250     a460:   e2503000    subs    r3, r0, #0                   r3 = r0 - 4  , #if (loc == ENVL_UNKNOWN) 
+ 11251     a464:   0a000003    beq a478 <env_driver_lookup+0x20>        
+ 11252     a468:   e59f0024    ldr r0, [pc, #36]   ; a494 <env_driver_lookup+0x3c>      ##00016660   
+ 11253     a46c:   e59f2024    ldr r2, [pc, #36]   ; a498 <env_driver_lookup+0x40>      ##00016688
+ 11254     a470:   e1500002    cmp r0, r2
+ 11255     a474:   1a000001    bne a480 <env_driver_lookup+0x28>
+ 11256     a478:   e3a00000    mov r0, #0                           ##return NULL;
+ 11257     a47c:   e8bd8010    pop {r4, pc}
+ 11258     a480:   e5901004    ldr r1, [r0, #4]         <<<<< r1 = [r0, #4] = [00016660 , #4] = [16664] = 4,但实际运行中这里出现了0xFFFFFFFF
+ 11259     a484:   e1530001    cmp r3, r1               <<<<r3 = r1 = 4
+ 11260     a488:   08bd8010    popeq   {r4, pc}         <<<<< r3 = r1则返回
+ 11261     a48c:   e2800014    add r0, r0, #20          r0 += 20
+ 11262     a490:   eafffff6    b   a470 <env_driver_lookup+0x18>
+ 11263     a494:   00016660    andeq   r6, r1, r0, ror #12           #指向<_u_boot_list_2_env_driver_2_flash>:   
+ 11264     a498:   00016688    andeq   r6, r1, r8, lsl #13
+
+ 24092 00016660 <_u_boot_list_2_env_driver_2_flash>:
+ 24093    16660:   00015816    andeq   r5, r1, r6, lsl r8
+ 24094    16664:   00000004    andeq   r0, r0, r4
+ 24095    16668:   0000af9c    muleq   r0, ip, pc  ; <UNPREDICTABLE>
+ 24096    1666c:   00000000    andeq   r0, r0, r0
+ 24097    16670:   0000afa8    andeq   sl, r0, r8, lsr #31
+
+ 26975 Disassembly of section .bss:
+ 26976 
+ 26977 00016688 <params>:
+ 26978    16688:   00000000    andeq   r0, r0, r0
+
+ 68940    16688:   16005000    strne   r5, [r0], -r0
+239762    16688:   34580001    ldrbcc  r0, [r8], #-1
+
+ 24115 Disassembly of section .rel.dyn:
+ 24116 
+ 24117 00016688 <__rel_dyn_end-0x2ca0>:
+ 24118    16688:   00000020    andeq   r0, r0, r0, lsr #32
+
+
+
+ 11237 0000a438 <env_get_location>:  r0 = enum env_operation op, r1 = int prio
+ 11238     a438:   e3510001    cmp r1, #1           《《《ARRAY_SIZE(env_locations)=2，if (prio >= ARRAY_SIZE(env_locations))转换为if (prio >1),这是编译器优化做的工作
+ 11239     a43c:   91a03009    movls   r3, r9                       <<<< [r3] = gd
+ 11240     a440:   9583102c    strls   r1, [r3, #44]   ; 0x2c       <<<< [r3, #44] = gd->env_load_prio   , 最终 gd->env_load_prio = prio;
+ 11241     a444:   959f3008    ldrls   r3, [pc, #8]    ; a454 <env_get_location+0x1c>    <<<< r3 = 00011c54
+ 11242     a448:   97930101    ldrls   r0, [r3, r1, lsl #2]     <<<< [r3, r1, lsl #2] = r3 + r1<<2  = env_locations[prio];
+ 11243     a44c:   83a00000    movhi   r0, #0                   《《《《if (prio >= ARRAY_SIZE(env_locations)) return ENVL_UNKNOWN;
+ 11244     a450:   e12fff1e    bx  lr
+ 11245     a454:   00011c54    andeq   r1, r1, r4, asr ip   <<<指向全局 env_locations 数组
+
+00011c54 <env_locations>:
+ 19198    11c54:   00000004    andeq   r0, r0, r4       <<<<ENVL_FLASH
+ 19199    11c58:   0000000c    andeq   r0, r0, ip       <<<<ENVL_NOWHERE
+
+
