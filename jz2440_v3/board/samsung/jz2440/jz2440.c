@@ -55,24 +55,22 @@ int board_early_init_f(void)
 	*/
 
 	/* configure MPLL */
-	writel((M_MDIV << 12) + (M_PDIV << 4) + M_SDIV,
+	/*writel((M_MDIV << 12) + (M_PDIV << 4) + M_SDIV,*/
+	writel(MPLLCON_VALUE,
 	       &clk_power->mpllcon);
 	/* some delay between MPLL and UPLL */
-	/*
 	pll_delay(4000);
-	*/
+
+#endif
 
 	/* configure UPLL */
-	/*
-	writel((U_M_MDIV << 12) + (U_M_PDIV << 4) + U_M_SDIV,
+	/*writel((U_M_MDIV << 12) + (U_M_PDIV << 4) + U_M_SDIV,*/
+	writel(UPLLCON_VALUE,
 	       &clk_power->upllcon);
-	*/
 
 	/* some delay between MPLL and UPLL */
-	/*
 	pll_delay(8000);
-	*/
-#endif
+
 	/* set up the I/O ports */
 
 	/*
