@@ -42,8 +42,8 @@
 #define B1_BWSCON		(DW16)
 #define B2_BWSCON		(DW16)
 #define B3_BWSCON		(DW16)
-#define B4_BWSCON		(DW16)
-#define B5_BWSCON		(DW8 ) /*jz2440用于扩展串口 old : (DW16)*/
+#define B4_BWSCON		(DW16+WAIT+UBLB)	/*DM9000网卡*/
+#define B5_BWSCON		(DW8 ) /*连接插座HEADER 20X2 ，jz2440 原理图上显示没有焊接 old : (DW16)*/
 #define B6_BWSCON		(DW32)
 #define B7_BWSCON		(DW32)
 
@@ -82,12 +82,13 @@
 #define B3_Tacp			0x0     /*  6clk */
 #define B3_PMC			0x0	/* normal */
 
+/* for eth DM9000*/
 #define B4_Tacs			0x0	/*  0clk */
-#define B4_Tcos			0x0	/*  0clk */
+#define B4_Tcos			0x3	/*  4clk */
 #define B4_Tacc			0x7	/* 14clk */
-#define B4_Tcoh			0x0	/*  0clk */
-#define B4_Tah			0x0	/*  0clk */
-#define B4_Tacp			0x0
+#define B4_Tcoh			0x1	/*  1clk 对比之前韦东山二期视频讲解的DM9000时序设置，我们在这里将位7:6设置为01*/
+#define B4_Tah			0x3	/*  4clk */
+#define B4_Tacp			0x6 /*  6clk */
 #define B4_PMC			0x0	/* normal */
 
 #define B5_Tacs			0x0	/*  0clk */
@@ -188,7 +189,7 @@ SMRDATA:
     .word ((B5_Tacs<<13)+(B5_Tcos<<11)+(B5_Tacc<<8)+(B5_Tcoh<<6)+(B5_Tah<<4)+(B5_Tacp<<2)+(B5_PMC))
     .word ((B6_MT<<15)+(B6_Trcd<<2)+(B6_SCAN))
     .word ((B7_MT<<15)+(B7_Trcd<<2)+(B7_SCAN))
-    .word ((REFEN<<23)+(TREFMD<<22)+(Trp<<20)+(Tsrc<<18)+(Tchr<<16)+REFCNT)		/*REFRESH*/
+    .word ((REFEN<<23)+(TREFMD<<22)+(Trp<<20)+(Tsrc<<18)+(Tchr<<16)+REFCNT)		/*REFRESH HCLK=12MHz:  0x008C07A3, HCLK=100MHz: 0x008C04F4*/
     .word ((BURST_EN<<7)+(SCKE_EN<<5)+(SCLK_EN<<4)+BK76MAP)						/*BANKSIZE real=64m, old:0x32 128m */
     .word 0x30		/*MRSRB6*/
     .word 0x30		/*MRSRB7*/

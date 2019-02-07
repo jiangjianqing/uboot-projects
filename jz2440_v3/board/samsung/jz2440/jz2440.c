@@ -40,10 +40,10 @@ int board_early_init_f(void)
 	/*设置分频系数 1:4:8*/
 	writel(0x5,&clk_power->clkdivn);
 
-	/*开启“asynchronous bus mode”*/
-	unsigned int cr_val = get_cr();
-	cr_val |= 0xc0000000;
-	set_cr(cr_val);
+	/*开启“asynchronous bus mode” ，写法模拟cache_enable()*/
+	uint32_t reg;
+	reg = get_cr();
+	set_cr(reg | 0xc0000000);
 
 	/*>>>>设置MPLL倍频值。它应该要在设置分频系数和初始化内存控制器之间来设置
 	 *>>>>这里的初始化部分都移到lowlevel_init.S中用汇编实现
@@ -105,8 +105,9 @@ int board_early_init_f(void)
 
 int board_init(void)
 {
-	/* arch number of SMDK2440-Board */
-	gd->bd->bi_arch_number = MACH_TYPE_SMDK2440;
+	/* arch number of MINI2440 board ， */
+	/*重要：对应kernel中的mach-mini-2440这样能够直接输出串口信息*/
+	gd->bd->bi_arch_number = MACH_TYPE_MINI2440;
 
 	/* adress of boot parameters */
 	gd->bd->bi_boot_params = 0x30000100;
@@ -128,8 +129,8 @@ int dram_init(void)
 int board_eth_init(bd_t *bis)
 {
 	int rc = 0;
-#ifdef CONFIG_CS8900
-	rc = cs8900_initialize(0, CONFIG_CS8900_BASE);
+#ifdef CONFIG_DRIVER_DM9000
+	rc = dm9000_initialize(bis);
 #endif
 	return rc;
 }
@@ -137,7 +138,9 @@ int board_eth_init(bd_t *bis)
 
 /*
  * Hardcoded flash setup:
- * Flash 0 is a non-CFI AMD AM29LV800BB flash.
+ * Flash 0 is a non-CFI MX29LV160DBTI flash.
+ * cfi_flash.c 和 jedec_flash.c 完成nor flash检测
+ * drivers/mtd/jedec_flash.c 中加入该nor flash芯片的支持
  */
 ulong board_flash_get_legacy(ulong base, int banknum, flash_info_t *info)
 {
