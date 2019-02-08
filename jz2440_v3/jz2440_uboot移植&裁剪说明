@@ -38,6 +38,12 @@ drivers/serial
 drivers/watchdog
     全部清空
 
+#board/samsung/jz2440/jz2440.c : board_early_init_f : 34
+设置MPLL、UPLL时钟频率参数
+
+#board/samsung/jz2440/jz2440.c : board_eth_init : 131
+加入对dm9000网卡的支持
+
 #drivers/mtd/jedec_flash.c
 加入对jz2440 使用的nor flash芯片的支持
 
