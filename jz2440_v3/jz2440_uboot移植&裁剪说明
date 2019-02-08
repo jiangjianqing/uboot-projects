@@ -38,6 +38,12 @@ drivers/serial
 drivers/watchdog
     全部清空
 
+#drivers/mtd/jedec_flash.c
+加入对jz2440 使用的nor flash芯片的支持
+
+#drivers/mtd/nand/raw/s3c2440_nand.c
+加入对jz2440 使用的nand flash芯片的支持
+
 #drivers/serial/serial_s3c24x0.c : serial_init_dev : 90
 关闭fifo的串口通讯参数
 串口设置要点：
