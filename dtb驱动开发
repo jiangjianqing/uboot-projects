@@ -1,0 +1,60 @@
+app:        open        read        write       ioctl
+驱动:     drv_open    drv_read    drv_write   drv_ioctl
+
+1、分配一个结构体  file_operations  (用于注册驱动程序)
+2、设置   
+    .open       = led_open      -----> 把led引脚配置为输出引脚（3.3v -> 限流电阻 -> led -> 引脚）
+        调用ioremap 进行物理地址到虚拟地址的映射 gpio_con = ioremap(base,8[kernel还是会映射一个页的大小])  视频位置16:29
+        把led引脚配置为输出引脚
+    .write      = led_write     -----> 根据app传入的值将led引脚设置为高电平或低电平
+        调用copy_from_user  -->用于将用户空间传来的buf复制到kernel空间，因为kernel中是无法直接访问用户空间的buf的
+        配置led引脚的状态：高电平 or 低电平
+    .release    = led_release
+        调用iounmap 释放内存映射
+
+3、注册（告诉kernel）      简单理解为kernel中有一个驱动程序链表，注册就是在该链表尾部加入新的file_operations实例
+    register_chrdev(主设备号,name[name并不重要?未必],file_operations)   --> Linux字符设备注册函数
+    int register_chrdev (unsigned int major, const  char *name, struct file_operations *fops); 
+    register_chrdev函数的major参数如果等于0，则表示采用系统动态分配的主设备号。
+4、入口函数  （调用register_chrdev）  是module_init吗？
+5、出口函数      (调用unregister_chrdev)
+    int unregister_chrdev(unsigned int major, const char *name); 
+
+
+驱动中如何指定引脚？？ 3种方法。
+1、在驱动代码中写死 （传统方法）   简单、不易扩展
+    led_drv.c   分配、设置、注册file_operations结构体  指定引脚
+
+2、总线设备驱动模型      提供不同的led_dev.c，每次要重新编译kernel
+    platform总线
+    led_drv.c   分配、设置、注册platform_drive结构体
+        .probe      分配、设置、注册file_operations结构体 ， 这里会传入platform_device结构体用于指定引脚
+        .drive      
+        .name       指定名称
+    led_dev.c   分配、设置、注册platform_device结构体
+        .resource   指定引脚
+        .name       指定名称
+
+3、使用设备树(dtb)    比传统方法稍复杂，无冗余代码,不需要重新编译kernnel,可以单独更新dtb文件
+    led_drv.c   同方法2一样
+    jz2440.dts  指定引脚 ， kernel根据.dts文件分配、设置、注册platform_device结构体
+    dts将会被编译为dtb文件，uboot启动时将其传入kernel
+
+三种方法的核心不变，差别就是如何指定引脚
+
+
+
+另外，需要在入口函数(module_init)中注册设备
+》》》》》由mdev自动发现并注册/dev/led节点，来被app访问
+class_create    --创建类型
+device_create   --创建设备
+
+在出口函数(module_exit)中注销设备
+device_destroy  --注销设备
+class_destroy   --注销类型
+
+非常重要：驱动程序可以用最新的gcc编译，应用程序工具链需要用老的arm-linux-gcc，为啥？貌似跟现在rootfs需要用老的gcc编译一个道理？这一点还需要验证
+
+一个好的驱动程序会尽量确定所用资源，只把不能确定的资源留给设备树。
+
+
