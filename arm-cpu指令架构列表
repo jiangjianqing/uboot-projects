@@ -1,0 +1,5 @@
+三星公司所产芯片
+    S5pv210包含arm核Cortex-A8采用指令架构armv7, 
+    S3c2440包含arm核ARM9采用armv4指令构架,
+    S3c6410包含arm核ARM11采用用指令构架armv6。
+    其中S3c2440已经停产。
