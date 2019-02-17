@@ -51,7 +51,7 @@ int main (int argc, char *argv[])
     // 3.3 bin长度不得超过16K-16byte
     count = (fileLen < (IMG_SIZE - SPL_HEADER_SIZE)) ? fileLen : (IMG_SIZE - SPL_HEADER_SIZE);
     // 3.4 buffer[0~15]存放"S5PC110 HEADER  "
-    memcpy(&Buf[0], SPL_HEADER, SPL_HEADER_SIZE);
+    //memcpy(&Buf[0], SPL_HEADER, SPL_HEADER_SIZE);
     // 3.5 读源bin到buffer[16]
     nbytes = fread(Buf + SPL_HEADER_SIZE, 1, fileLen, fp);
 	new_fileLen = fileLen + SPL_HEADER_SIZE;
@@ -61,6 +61,9 @@ int main (int argc, char *argv[])
         free(Buf); fclose(fp); return -1;
     }
     fclose(fp);
+    //写入BL1大小
+    a = Buf;    // Buf是210.bin的起始地址
+    *( (unsigned int *)a ) = fileLen;
     // 4. 计算校验和
     // 4.1 从第16byte开始统计buffer中共有几个1
     // 4.1 从第16byte开始计算，把buffer中所有的字节数据加和起来得到的结果

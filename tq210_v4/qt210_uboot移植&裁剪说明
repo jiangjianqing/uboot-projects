@@ -14,6 +14,30 @@ mkv210_image.c的作用：
 具链是完全无关的。由led.bin得到210.bin的过程是三星的S5PV210所特有的，因此需要
 我们自己去完成，为此我们写了mkv210_image.c来完成。
 
+#注意一个文件
+project-x/u-boot/scripts/Makefile.spl
+
+ifdef CONFIG_SAMSUNG
+ALL-y   += $(obj)/$(BOARD)-spl.bin
+endif
+## 当平台是SAMSUNG平台的时候，也就是CONFIG_SAMSUNG被定义的时候，就需要生成对应的板级spl.bin文件，例如tiny210的话，就应该生成对应的spl/tiny210-spl.bin文件。
+
+ifdef CONFIG_S5PC110
+$(obj)/$(BOARD)-spl.bin: $(obj)/u-boot-spl.bin
+        $(objtree)/tools/mks5pc1xxspl $< $@
+## 如果是S5PC110系列的cpu的话，则使用如上方法打上header。tiny210的cpu是s5pv210的，属于S5PC110系列，所以走的是这路。
+## $(objtree)/tools/mks5pc1xxspl对应于编译uboot时生成的build/out/u-boot/tools/mks5pc1xxspl
+## 其代码路径位于u-boot/tools/mks5pc1xxspl.c，会根据s5pc1xx系列的header规则为输入bin文件加上16B的header，具体参考代码。
+## 这里就构成了u-boot-spl.bin到tiny210-spl.bin的过程了。
+else
+$(obj)/$(BOARD)-spl.bin: $(obj)/u-boot-spl.bin
+        $(if $(wildcard $(objtree)/spl/board/samsung/$(BOARD)/tools/mk$(BOARD)spl),\
+        $(objtree)/spl/board/samsung/$(BOARD)/tools/mk$(BOARD)spl,\
+        $(objtree)/tools/mkexynosspl) $(VAR_SIZE_PARAM) $< $@
+endif
+endif
+这里就构成了u-boot-spl.bin到tiny210-spl.bin的过程了。
+
 板子上的基本资源：
     s5pv210属于armv7 cpu  /*以下内容还要持续修正*/
     板载晶振12MHZ,刚上电时CPU以该频率运行
