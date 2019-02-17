@@ -1,0 +1,100 @@
+s5pc100，是三星的第一颗Cortex-a8处理器，被Apple改了改后，就成为了A4
+s5pc110/s5pv210，是s5pc100的后续产品，使用了45nm工艺，提高了显卡
+三星S5PV210和S5PC110的区别在于其封装方式，本质并无太多变化(有些小差别，如内存控制器...)。前者封装尺寸较大，适用于平板和上网本，后者的小尺寸封装适用于手机。
+
+uboot的arch/arm目录中找不到mach-s5pv210目录，所以只能使用s5pc110进行移植。
+最后有两块单板使用了S5PC110（ smdkc100 和 s5p_goni），都进行初次编译后，决定先用s5p_goni进行移植。
+
+关于建立单板的方法：
+uboot中并没有s5pv210这款cpu，看到网上有的人使用重新创建S5PV210 cpu的方式，但我不会这么做。
+鉴于s5pc110/s5pv210几乎一样，我会在代码中沿用s5pc110这款cpu，就当是自己在为该款cpu进行移植即可。
+
+mkv210_image.c的作用：
+为BL1添加校验头，我们编译链接时只得到了led.bin，这个210.bin的得到和交叉编译工
+具链是完全无关的。由led.bin得到210.bin的过程是三星的S5PV210所特有的，因此需要
+我们自己去完成，为此我们写了mkv210_image.c来完成。
+
+板子上的基本资源：
+    s5pv210属于armv7 cpu  /*以下内容还要持续修正*/
+    板载晶振12MHZ,刚上电时CPU以该频率运行
+    主时钟源和 USB 时钟源都是晶振
+    ddr         EM63A165TS-6G           2000 MiB                                nSCS=nGCS6(0x30000000)        
+    sd_card     MX29LV160DBTI                                                   SD2_       
+    emmc        K9F2G08U0C              256 MiB                                 SD4_
+    enet        dm9000                  1000 MiB                              
+    3个串口，串口1并接了usb芯片便于调试输出
+
+#define MACH_TYPE_TINY210              4448
+#define MACH_TYPE_SMDKV210             2456
+#define MACH_TYPE_SMDKC210             2838
+#define MACH_TYPE_MINI210              3466
+
+#define MACH_TYPE_TINY4412             4608
+#define MACH_TYPE_EXYNOS4412           5030
+#define MACH_TYPE_SMDK4412             3765
+
+今天重新熟悉了下天嵌的uboot下载过程。
+S5PV210的启动过程分为BL0，BL1，BL2。
+BL0是用来初始化系统时钟，设置看门狗，初始化堆和栈，加载BL1。
+BL1用来初始化RAM,加载BL2。
+BL2做初始化，然后加载OS.
+
+
+
+注：MTD设备都使用片选引脚,访问某个设备时将该片选引脚设为低电平，其他设备的片选引脚拉为高电平!!!
+CPU访问某个内存地址(MTD设备)时，内存控制器根据内存地址的有效范围来确定哪个片选信号设为低电平。
+nGCS可用列表具体查阅 P195 MEMORY CONTROLLER
+
+减少bin文件大小的办法：
+    1、include/configs/jz2440.h   中移除所有附加的压缩方法和命令
+    2、configs/jz2440_defconfig   屏蔽所有不需要的命令
+
+#天嵌提供的uboot新增了一个board.c文件，需要将其调整
+arch/arm/lib/board.c            #arm使用这个文件完成启动 2019.1.21发现
+    board_init_r()
+
+##单板文件清理
+arch
+    仅保留arm目录
+arch/arm/cpu/
+    仅保留armv7 目录 -----> 尚未成功
+arch/arm/dts/
+    仅保留相关的dts和dtsi文件     /*这在jz2440时没有进行处理*/
+arch/arm/include/asm/
+    仅保留armv7 和 mx6 相关的目录和文件 
+board/
+    仅保留 mx6qarm2  单板
+configs
+    仅保留一个文件 mx6qarm2_defconfig
+include/configs
+    仅保留两个文件 ： mx6_common.h  mx6qarm2.h
+
+#board/freescale/mx6qarm2/mx6qarm2.c : 
+设置对 DDR时钟 、 sd_card 、emmc 、fec ar8035 网卡的支持
+
+board_early_init_f 仅包含两个函数调用：
+/*这里比jz2440要简单很多，因为时钟等参数都在 imximage.cfg 设置*/
+	setup_iomux_uart(); /*初始化串口*/
+	setup_iomux_enet(); /*初始化网卡*/
+  
+	reset_ar8035();/*配置了复用引脚，然后将ar8035收发器复位方便后期的使用*/
+
+
+imx6已经不支持nor flash，不需要像jz2440一样再加入nor_flash芯片的支持
+
+
+
+串口设置要点：
+　　　　GPHUP：  由于JZ2440的串口采用TTL标准，所以一开始应该是高电位，需要将相应引脚的电位上拉
+　　　　　　　　　这里往GPHUP寄存的的bit3和bit2里写入1，即可完成设置。
+名词解释
+PLL 锁相环
+FCLK (CPU时钟)  HCLK(AHB时钟) PCLK(APB时钟) UCLK(USB时钟) CAMCLK(camera时钟)
+
+
+AHB总线规范是AMBA总线规范的一部分，AMBA总线规范是ARM公司提出的总线规范，被大多数SoC设计采用，它规定了AHB (Advanced High-performance Bus)、ASB (Advanced System Bus)、APB (Advanced Peripheral Bus)。
+AHB用于高性能、高时钟频率的系统结构，典型的应用如ARM核与系统内部的高速RAM、NAND FLASH、DMA、Bridge的连接。
+APB用于连接外部设备，对性能要求不高，而考虑低功耗问题。
+ASB是AHB的一种替代方案。
+
+
