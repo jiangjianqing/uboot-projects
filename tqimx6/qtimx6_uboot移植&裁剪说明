@@ -1,0 +1,65 @@
+板子上的基本资源：
+    imx6q属于armv7-a cpu  /*以下内容还要持续修正*/
+    板载晶振12MHZ,刚上电时CPU以该频率运行
+    主时钟源和 USB 时钟源都是晶振
+    ddr         EM63A165TS-6G           2000 MiB                                nSCS=nGCS6(0x30000000)        
+    sd_card     MX29LV160DBTI                                                   SD2_       
+    emmc        K9F2G08U0C              256 MiB                                 SD4_
+    enet        ar8035                  1000 MiB                              
+    3个串口，串口1并接了usb芯片便于调试输出
+
+注：MTD设备都使用片选引脚,访问某个设备时将该片选引脚设为低电平，其他设备的片选引脚拉为高电平!!!
+CPU访问某个内存地址(MTD设备)时，内存控制器根据内存地址的有效范围来确定哪个片选信号设为低电平。
+nGCS可用列表具体查阅 P195 MEMORY CONTROLLER
+
+减少bin文件大小的办法：
+    1、include/configs/jz2440.h   中移除所有附加的压缩方法和命令
+    2、configs/jz2440_defconfig   屏蔽所有不需要的命令
+
+#天嵌提供的uboot新增了一个board.c文件，需要将其调整
+arch/arm/lib/board.c            #arm使用这个文件完成启动 2019.1.21发现
+    board_init_r()
+
+##单板文件清理
+arch
+    仅保留arm目录
+arch/arm/cpu/
+    仅保留armv7 目录 -----> 尚未成功
+arch/arm/include/asm/
+    仅保留armv7 和 mx6 相关的目录和文件 
+board/
+    仅保留 mx6qarm2  单板
+configs
+    仅保留一个文件 mx6qarm2_defconfig
+include/configs
+    仅保留两个文件 ： mx6_common.h  mx6qarm2.h
+
+#board/freescale/mx6qarm2/mx6qarm2.c : 
+设置对 DDR时钟 、 sd_card 、emmc 、fec ar8035 网卡的支持
+
+board_early_init_f 仅包含两个函数调用：
+/*这里比jz2440要简单很多，因为时钟等参数都在 imximage.cfg 设置*/
+	setup_iomux_uart(); /*初始化串口*/
+	setup_iomux_enet(); /*初始化网卡*/
+  
+	reset_ar8035();/*配置了复用引脚，然后将ar8035收发器复位方便后期的使用*/
+
+
+imx6已经不支持nor flash，不需要像jz2440一样再加入nor_flash芯片的支持
+
+
+
+串口设置要点：
+　　　　GPHUP：  由于JZ2440的串口采用TTL标准，所以一开始应该是高电位，需要将相应引脚的电位上拉
+　　　　　　　　　这里往GPHUP寄存的的bit3和bit2里写入1，即可完成设置。
+名词解释
+PLL 锁相环
+FCLK (CPU时钟)  HCLK(AHB时钟) PCLK(APB时钟) UCLK(USB时钟) CAMCLK(camera时钟)
+
+
+AHB总线规范是AMBA总线规范的一部分，AMBA总线规范是ARM公司提出的总线规范，被大多数SoC设计采用，它规定了AHB (Advanced High-performance Bus)、ASB (Advanced System Bus)、APB (Advanced Peripheral Bus)。
+AHB用于高性能、高时钟频率的系统结构，典型的应用如ARM核与系统内部的高速RAM、NAND FLASH、DMA、Bridge的连接。
+APB用于连接外部设备，对性能要求不高，而考虑低功耗问题。
+ASB是AHB的一种替代方案。
+
+
