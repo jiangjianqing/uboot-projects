@@ -1,0 +1,49 @@
+uboot 命令框架移植到fswing
+
+rootfs
+    busybox 1.29.3 移植到2440并完成运行测试   [2019.1.21]
+    移植wolfssl，替换openssl，减少体积
+    裁剪不必要的内容，减少体积
+    移植imx6q，完成验证
+
+uboot
+
+    申明CONFIG_MENU_SHOW，将韦东山的uboot menu 移植到最新的uboot中，形成自己的工具集
+    开启uboot fdt功能，编写2440所有设备的设备树文件并验证，开发并形成自己的验证工具
+    裁剪，尽可能提高启动速度
+
+    nand flash是以块为单位操作的，所以各个分区的偏移地址、大小、结束地址必须遵循以128k为单位的规则，即都是0x20000的倍数
+
+    重要：一定要让uboot将mtdparts信息通过bootargs传递给kernel，这样在kernel中就不需要再重复指定mtdparts表信息了。
+    具体查看：https://www.cnblogs.com/ben-ben/articles/2754995.html
+
+    yaffs2暂时不移植到uboot，因为不是uboot和linux官方支持
+    uboot中的分区其实是对地址的别名管理
+
+    2019.02.12  ： 
+        1、kernel中加入dm9000网卡支持，用于nfs启动rootfs
+        2、需要加入nand ecc，当前kernel无法从nand的rootfs启动
+        
+        *、需要将u-boot烧入nand，因为nor flash已经淘汰    [该部分在制作s5pv210的uboot时一并处理] 
+        
+
+driver移植
+    jz2440 v3   [学习阶段]
+        移植kernel 3.16最新版
+        移植kernel 4.x最新版
+    4412 [待定]
+    imx6q       [实践阶段]
+        移植kernel 3.16最新版
+        移植kernel 4.x最新版
+        移植最新的uboot和kernel，完成验证
+
+从kernel中提取设备树解析部分，将其用于后续的应用程序的动态设备扩展
+
+
+【2019目标】：尝试做内核开发兼职，learn to cash!!车联网应该是非常有前景的！
+技术发展方向：性能优化！包括内存占用、内核裁剪、uboot裁剪
+
+
+
+
+
