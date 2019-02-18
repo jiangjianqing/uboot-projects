@@ -1,3 +1,33 @@
+2019.02.18重要发现：
+移植tiny4412时，发现了spl相关处理方式
+board/samsung/origen/tools/mkorigenspl.c   #该文件中的一行 #define SPL_HEADER		"S5PC210 HEADER  "
+也就是说定下来接下来的移植学习步骤：
+1、先学习4412的移植，成功建立tiny4412单板
+2、根据tiny4412单板文件模板，移植tq210单板
+目前状态：
+1、在arch/arm/mach-s5pc1xx/Kconfig中对goni单板加入select SUPPORT_SPL 选项，使menuconfig中的SPL/TPL菜单可用
+2、#注意一个文件 project-x/u-boot/scripts/Makefile.spl ，该文件中的代码描述了SAMSUNG对于spl规则的使用方式
+    ifdef CONFIG_SAMSUNG
+    ALL-y   += $(obj)/$(BOARD)-spl.bin
+    endif
+    ## 当平台是SAMSUNG平台的时候，也就是CONFIG_SAMSUNG被定义的时候，就需要生成对应的板级spl.bin文件，例如tiny210的话，就应该生成对应的spl/tiny210-spl.bin文件。
+
+    ifdef CONFIG_S5PC110
+    $(obj)/$(BOARD)-spl.bin: $(obj)/u-boot-spl.bin
+            $(objtree)/tools/mks5pc1xxspl $< $@
+    ## 如果是S5PC110系列的cpu的话，则使用如上方法打上header。tiny210的cpu是s5pv210的，属于S5PC110系列，所以走的是这路。
+    ## $(objtree)/tools/mks5pc1xxspl对应于编译uboot时生成的build/out/u-boot/tools/mks5pc1xxspl
+    ## 其代码路径位于u-boot/tools/mks5pc1xxspl.c，会根据s5pc1xx系列的header规则为输入bin文件加上16B的header，具体参考代码。
+    ## 这里就构成了u-boot-spl.bin到tiny210-spl.bin的过程了。
+    else
+    $(obj)/$(BOARD)-spl.bin: $(obj)/u-boot-spl.bin
+            $(if $(wildcard $(objtree)/spl/board/samsung/$(BOARD)/tools/mk$(BOARD)spl),\
+            $(objtree)/spl/board/samsung/$(BOARD)/tools/mk$(BOARD)spl,\
+            $(objtree)/tools/mkexynosspl) $(VAR_SIZE_PARAM) $< $@
+    endif
+    endif
+    这里就构成了u-boot-spl.bin到tiny210-spl.bin的过程了。
+
 s5pc100，是三星的第一颗Cortex-a8处理器，被Apple改了改后，就成为了A4
 s5pc110/s5pv210，是s5pc100的后续产品，使用了45nm工艺，提高了显卡
 三星S5PV210和S5PC110的区别在于其封装方式，本质并无太多变化(有些小差别，如内存控制器...)。前者封装尺寸较大，适用于平板和上网本，后者的小尺寸封装适用于手机。
@@ -13,30 +43,6 @@ mkv210_image.c的作用：
 为BL1添加校验头，我们编译链接时只得到了led.bin，这个210.bin的得到和交叉编译工
 具链是完全无关的。由led.bin得到210.bin的过程是三星的S5PV210所特有的，因此需要
 我们自己去完成，为此我们写了mkv210_image.c来完成。
-
-#注意一个文件
-project-x/u-boot/scripts/Makefile.spl
-
-ifdef CONFIG_SAMSUNG
-ALL-y   += $(obj)/$(BOARD)-spl.bin
-endif
-## 当平台是SAMSUNG平台的时候，也就是CONFIG_SAMSUNG被定义的时候，就需要生成对应的板级spl.bin文件，例如tiny210的话，就应该生成对应的spl/tiny210-spl.bin文件。
-
-ifdef CONFIG_S5PC110
-$(obj)/$(BOARD)-spl.bin: $(obj)/u-boot-spl.bin
-        $(objtree)/tools/mks5pc1xxspl $< $@
-## 如果是S5PC110系列的cpu的话，则使用如上方法打上header。tiny210的cpu是s5pv210的，属于S5PC110系列，所以走的是这路。
-## $(objtree)/tools/mks5pc1xxspl对应于编译uboot时生成的build/out/u-boot/tools/mks5pc1xxspl
-## 其代码路径位于u-boot/tools/mks5pc1xxspl.c，会根据s5pc1xx系列的header规则为输入bin文件加上16B的header，具体参考代码。
-## 这里就构成了u-boot-spl.bin到tiny210-spl.bin的过程了。
-else
-$(obj)/$(BOARD)-spl.bin: $(obj)/u-boot-spl.bin
-        $(if $(wildcard $(objtree)/spl/board/samsung/$(BOARD)/tools/mk$(BOARD)spl),\
-        $(objtree)/spl/board/samsung/$(BOARD)/tools/mk$(BOARD)spl,\
-        $(objtree)/tools/mkexynosspl) $(VAR_SIZE_PARAM) $< $@
-endif
-endif
-这里就构成了u-boot-spl.bin到tiny210-spl.bin的过程了。
 
 板子上的基本资源：
     s5pv210属于armv7 cpu  /*以下内容还要持续修正*/

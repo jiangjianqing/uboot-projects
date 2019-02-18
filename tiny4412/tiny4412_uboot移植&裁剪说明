@@ -1,0 +1,6 @@
+2019.02.18状态：
+CPU家族 arch/arm/mach-exynos
+uboot中支持该cpu的单板有3个：
+    odroid
+    origen (*)仅该单板默认加入了spl支持，所以是移植模板，其他两个单板中有大量的示例代码，可做参考
+    trats2
