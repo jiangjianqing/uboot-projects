@@ -4,3 +4,36 @@ uboot中支持该cpu的单板有3个：
     odroid
     origen (*)仅该单板默认加入了spl支持，所以是移植模板，其他两个单板中有大量的示例代码，可做参考
     trats2
+4412三星原本是准备自己使用，所以很多资料没有开放。
+
+Exynos4412启动分为3个阶段：
+    1）BLO   》》》4412内部有64K的ROM和256K SRAM，在ROM中已经固化好了一段代码，当硬件上电后首先运行的就是这段代码，这段代码三星起名为BLO（iROM BOOT 代码），其作用是初始化SRAM，并将eMMC中256k代码拷贝到SRAM中，进行初始化DRAM。iROM把启动设备上特定位置处的程序读入片内存 (iRAM) ，并执行它。这个程序被称为 BL1(Bootloader 1) ，
+    2）BL1   》》》BL1 是三星公司提供的，无源码。BL1又把启动设备上另一个特定位置处的程序读入片内内存，并执行它。这个被称为 BL2(Bootloader 2) ，是我们编写的源码。
+    3）BL2   》》》u-boot.bin
+
+
+    
+
+驱动模块命令：
+    lsusb  >>>显示已连接的所有usb设备
+    lsmod   >>>列出所有模块
+3.编译完成后，会生成secbulk.ko文件： # ls
+ 　　Makefile Module.symvers secbulk.ko secbulk.mod.o
+　　modules.order secbulk.c secbulk.mod.c secbulk.o
+
+　　4.加载模块到Linux内核： # insmod ./secbulk.ko （注意要在root权限下）
+
+　　# dmesg (查看是否加载成功）
+　　secbulk:secbulk loaded
+　　usbcore: registered new interface driver secbulk （看到这样两行就说明成功了）
+
+
+tiny4412_uboot 官方版本注意事项：
+    board/samsung/tiny4412
+    1、开启了mmu，需要关闭   》》》 如何判断开启了MMU？通过vim System.map 查看起始地址是否为0x43e00000
+    2、config.mk中设定了CONFIG_SYS_TEXT_BASE = 0xc3e00000,这是va地址，需要改为pa地址0x43e00000
+内存分配情况(共1G)：
+4000 0000 - 5000 0000       256M
+....                        256M *2
+7000 0000 - 8000 0000       256M
+
