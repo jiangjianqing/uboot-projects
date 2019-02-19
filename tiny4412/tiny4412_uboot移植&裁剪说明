@@ -16,30 +16,14 @@ Exynos4412启动分为3个阶段：
 (二)使用mkbl2给SPL添加校验码
 $ ./sd_fuse/mkbl2 spl/u-boot-spl.bin bl2.bin 14336
 
+mkbl2 原理：读取源文件14k-4字节，计算校验和，写入14k-4至14k的地方，生成bl2.bin。
+无论是sd卡，还是emmc，BL2存放在第17个扇区，大小14K，校验和必须存放在14k-4的位置，估计BL1会到这个位置取出校验和进行校验文件是否损坏。
+
 (三) 烧写  我的读卡器是/dev/sdc，大家按自己的具体情况修改。
 dd iflag=dsync oflag=dsync if=E4412_N.bl1.bin of=/dev/sdc seek=1;
 dd iflag=dsync oflag=dsync if=bl2.bin of=/dev/sdc seek=17;
 dd iflag=dsync oflag=dsync if=u-boot.bin of=/dev/sdc seek=81;
 sync
-
-作者：techping
-链接：https://www.jianshu.com/p/184128fd3114
-來源：简书
-简书著作权归作者所有，任何形式的转载都请联系作者获得授权并注明出处。
-    
-
-驱动模块命令：
-    lsusb  >>>显示已连接的所有usb设备
-    lsmod   >>>列出所有模块
-3.编译完成后，会生成secbulk.ko文件： # ls
- 　　Makefile Module.symvers secbulk.ko secbulk.mod.o
-　　modules.order secbulk.c secbulk.mod.c secbulk.o
-
-　　4.加载模块到Linux内核： # insmod ./secbulk.ko （注意要在root权限下）
-
-　　# dmesg (查看是否加载成功）
-　　secbulk:secbulk loaded
-　　usbcore: registered new interface driver secbulk （看到这样两行就说明成功了）
 
 
 tiny4412_uboot 官方版本注意事项：
