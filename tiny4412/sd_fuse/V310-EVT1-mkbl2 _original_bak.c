@@ -11,8 +11,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define BL2_SIZE   14*1024  /* default size = 14336*/
-
 int main (int argc, char *argv[])
 {
 	FILE		*fp;
@@ -23,16 +21,13 @@ int main (int argc, char *argv[])
 	unsigned int	checksum = 0;
 	int		i;
 
-	/*if (argc != 4)*/
-    if (argc != 3 && argc != 4)
+	if (argc != 4)
 	{
-		printf("Usage: mkbl1 <source file> <destination file> [<size>] \n size = default is 14336. \n");
+		printf("Usage: mkbl1 <source file> <destination file> <size> \n");
 		return -1;
 	}
 
- 	BufLen =  argc == 3 ? BL2_SIZE : atoi(argv[3]); /*设定14336作为BufLen默认值命令行可以忽略该参数*/
-    printf("argc  = %d. \n",argc);
-    printf("BL2 size = %d. \n",BufLen);
+	BufLen = atoi(argv[3]);
 	Buf = (char *)malloc(BufLen);
 	memset(Buf, 0x00, BufLen);
 
@@ -48,7 +43,6 @@ int main (int argc, char *argv[])
 	fileLen = ftell(fp);
 	fseek(fp, 0L, SEEK_SET);
 
-/*
 	if ( BufLen > fileLen )
 	{
 		printf("Usage: unsupported size\n");
@@ -57,11 +51,9 @@ int main (int argc, char *argv[])
 		return -1;
 	}
 
-	nbytes = fread(Buf, 1, BufLen, fp);*/
-    nbytes = fread(Buf, 1, BufLen > fileLen ? fileLen : BufLen, fp); /*根据文件大小和Buf大小确定要读取的文件长度*/
+	nbytes = fread(Buf, 1, BufLen, fp);
 
-	/*if ( nbytes != BufLen )*/
-    if ( nbytes <= 0)
+	if ( nbytes != BufLen )
 	{
 		printf("source file read error\n");
 		free(Buf);
@@ -70,13 +62,12 @@ int main (int argc, char *argv[])
 	}
 
 	fclose(fp);
-    /*始终根据BufLen-4进行校验和计算,默认为BL2_SIZE - 4*/
-	/*for(i = 0;i < (14 * 1024) - 4;i++)*/
-    for(i = 0;i < BufLen - 4;i++)
+
+	for(i = 0;i < (14 * 1024) - 4;i++)
 	{
 		checksum += (unsigned char)(Buf[i]);
 	}
-	*(unsigned int*)(Buf+i) = checksum; /*将校验和写入BufLen-4的地方*/
+	*(unsigned int*)(Buf+i) = checksum;
 
 	fp = fopen(argv[2], "wb");
 	if (fp == NULL)

@@ -12,6 +12,20 @@ Exynos4412启动分为3个阶段：
     3）BL2   》》》u-boot.bin
 
 
+
+(二)使用mkbl2给SPL添加校验码
+$ ./sd_fuse/mkbl2 spl/u-boot-spl.bin bl2.bin 14336
+
+(三) 烧写  我的读卡器是/dev/sdc，大家按自己的具体情况修改。
+dd iflag=dsync oflag=dsync if=E4412_N.bl1.bin of=/dev/sdc seek=1;
+dd iflag=dsync oflag=dsync if=bl2.bin of=/dev/sdc seek=17;
+dd iflag=dsync oflag=dsync if=u-boot.bin of=/dev/sdc seek=81;
+sync
+
+作者：techping
+链接：https://www.jianshu.com/p/184128fd3114
+來源：简书
+简书著作权归作者所有，任何形式的转载都请联系作者获得授权并注明出处。
     
 
 驱动模块命令：
