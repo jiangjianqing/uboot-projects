@@ -32,6 +32,7 @@ int main (int argc, char *argv[])
 
  	BufLen =  argc == 3 ? BL2_SIZE : atoi(argv[3]); /*设定14336作为BufLen默认值命令行可以忽略该参数*/
     printf("argc  = %d. \n",argc);
+    printf("bl2 file  = %s. \n",argv[1]);
     printf("BL2 size = %d. \n",BufLen);
 	Buf = (char *)malloc(BufLen);
 	memset(Buf, 0x00, BufLen);
@@ -48,6 +49,7 @@ int main (int argc, char *argv[])
 	fileLen = ftell(fp);
 	fseek(fp, 0L, SEEK_SET);
 
+    printf("file len = %d. \n",fileLen);
 /*
 	if ( BufLen > fileLen )
 	{
