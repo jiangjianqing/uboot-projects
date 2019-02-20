@@ -1,0 +1,5 @@
+uboot中使用device tree：最近搞uboot 驱动，搞了好久才发现uboot的dts规则跟kernel不一样，uboot驱动务必要加入bind函数，否则，驱动不会被初始化。
+
+dts源码在scripts/dtc目录下
+
+参考文档在Documentation/devicetree目录下

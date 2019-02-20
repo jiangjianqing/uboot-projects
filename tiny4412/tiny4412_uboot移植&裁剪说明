@@ -1,3 +1,31 @@
+设置正确的时钟频率
+参考Android_Exynos4412_iROM_Secure_Booting_Guide_Ver.1.00.00.pdf提示：
+Warning: The frequency of clocks supplied to SDMMC and eMMC are 20Mhz at the Booting time. MPLL is the source of these clocks
+
+
+tzpc_init();/*必须关掉 tzpc_init()，否则从SPL跳转到UBOOT执行时死机*/
+
+
+因此，根据原理图可以得知，开发板使用SDMMC2，需要设置SDMMC2的时钟为20MHz。
+
+root@ubuntu:/opt/u-boot-2017.03# git diff 565d 1071 diff --git a/arch/arm/mach-exynos/clock_init_exynos4412.c b/arch/arm mach-exynos/clock_init_exynos4412.c
+index d1b4de5..b07fb2d 100644
+--- a/arch/arm/mach-exynos/clock_init_exynos4412.c
++++ b/arch/arm/mach-exynos/clock_init_exynos4412.c
+@@ -298,9 +298,9 @@ void system_clock_init(void)
+* DOUTmmc3 = MOUTmmc3 / (ratio + 1) = 100 (7)
+* sclk_mmc3 = DOUTmmc3 / (ratio + 1) = 50 (1)
+* DOUTmmc2 = MOUTmmc2 / (ratio + 1) = 100 (7)
+-        * sclk_mmc2 = DOUTmmc2 / (ratio + 1) = 50 (1)
++        * sclk_mmc2 = DOUTmmc2 / (ratio + 1) = 20 (4)
+*/
+-   set = MMC2_RATIO(7) | MMC2_PRE_RATIO(1) | MMC3_RATIO(7) |
++   set = MMC2_RATIO(7) | MMC2_PRE_RATIO(4) | MMC3_RATIO(7) |
+MMC3_PRE_RATIO(1);
+
+clrsetbits_le32(&clk->div_fsys2, clr, set);
+--------------------------------------------------------------
+
 2019.02.18状态：
 CPU家族 arch/arm/mach-exynos
 uboot中支持该cpu的单板有3个：
@@ -11,20 +39,20 @@ Exynos4412启动分为3个阶段：
     2）BL1   》》》BL1 是三星公司提供的，无源码。BL1又把启动设备上另一个特定位置处的程序读入片内内存，并执行它。这个被称为 BL2(Bootloader 2) ，是我们编写的源码。
     3）BL2   》》》u-boot.bin
 
+#spl启动需要注意的几个变量
+    CONFIG_SPL_TEXT_BASE    0x02023400		
 
-
-(二)使用mkbl2给SPL添加校验码
-$ ./sd_fuse/mkbl2 spl/u-boot-spl.bin bl2.bin 14336
-
-mkbl2 原理：读取源文件14k-4字节，计算校验和，写入14k-4至14k的地方，生成bl2.bin。
-无论是sd卡，还是emmc，BL2存放在第17个扇区，大小14K，校验和必须存放在14k-4的位置，估计BL1会到这个位置取出校验和进行校验文件是否损坏。
-
-(三) 烧写  我的读卡器是/dev/sdc，大家按自己的具体情况修改。
-dd iflag=dsync oflag=dsync if=E4412_N.bl1.bin of=/dev/sdc seek=1;
-dd iflag=dsync oflag=dsync if=bl2.bin of=/dev/sdc seek=17;
-dd iflag=dsync oflag=dsync if=u-boot.bin of=/dev/sdc seek=81;
-sync
-
+#spl长度设置
+    >board/samsung/common/exynos-uboot-spl.lds : 12
+        MEMORY { .sram : ORIGIN = CONFIG_SPL_TEXT_BASE, \
+		        LENGTH = CONFIG_SPL_MAX_FOOTPRINT }
+    >arch/arm/cpu/u-boot-spl.lds : 91
+        #if defined(CONFIG_SPL_MAX_FOOTPRINT)
+        ASSERT(__bss_end - _start < (CONFIG_SPL_MAX_FOOTPRINT), \
+	        "SPL image plus BSS too big");
+        #endif
+    
+arch/arm/mach-exynos/spl_boot.c
 
 tiny4412_uboot 官方版本注意事项：
     board/samsung/tiny4412
