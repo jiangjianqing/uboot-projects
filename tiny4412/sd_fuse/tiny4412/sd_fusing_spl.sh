@@ -64,12 +64,12 @@ ${MKBL2} ${E4412_SPL} bl2.bin 14336
 
 ####################################
 # fusing images
-
-signed_bl1_position=1
-bl2_position=17
-#uboot_position=49
-uboot_position=81
-tzsw_position=705
+                        #block0 Reserved，保存dos分区表     共512B
+signed_bl1_position=1   #block1 ~16 保存E4412_N.bl1.bin,  共8  k
+bl2_position=17         #block17~48 保存u-boot-spl.bin,   共16 k
+                        #block49~80 保存env,              共16 k
+uboot_position=81       #block81~1104 保存u-boot.bin      共512k
+tzsw_position=1105
 
 #<BL1 fusing>
 echo "---------------------------------------"

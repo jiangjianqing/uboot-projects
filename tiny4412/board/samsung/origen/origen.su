@@ -1,0 +1,4 @@
+origen.c:15:5:get_board_rev	0	static
+origen.c:20:5:exynos_init	0	static
+origen.c:25:5:board_usb_init	0	static
+origen.c:31:5:exynos_early_init_f	0	static

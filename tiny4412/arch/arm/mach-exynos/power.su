@@ -1,0 +1,12 @@
+power.c:33:6:set_mipi_phy_ctrl	0	static
+power.c:39:6:exynos5_set_usbhost_phy_ctrl	0	static
+power.c:55:6:exynos4412_set_usbhost_phy_ctrl	0	static
+power.c:79:6:set_usbhost_phy_ctrl	0	static
+power.c:124:6:set_usbdrd_phy_ctrl	0	static
+power.c:149:6:exynos_dp_phy_ctrl	0	static
+power.c:171:6:set_ps_hold_ctrl	0	static
+power.c:188:6:set_xclkout	0	static
+power.c:195:6:set_hw_thermal_trip	0	static
+power.c:222:10:get_reset_status	0	static
+power.c:248:6:power_exit_wakeup	0	static
+power.c:256:14:get_boot_mode	0	static
