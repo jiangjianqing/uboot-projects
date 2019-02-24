@@ -1,5 +1,27 @@
 uboot 命令框架移植到fswing
 
+tiny4412   2019.02.24
+    ram不稳定，推测是dmc_init_exynos4.c关于dmc的配置不正确
+    导致u-boot-spl  copy_uboot_to_ram 中自写的ram验证代码无法通过
+    但是通过点灯确认u-boot-spl已经成功跳转到u-boot在ram的代码中。
+    熟悉PLL clock diagram的阅读和配置生成    
+
+tqimx6q
+    加入emmc分区支持
+    移植linux内核 ，考虑android5.1的支持，选择kernel 4.4
+    移植qt
+    驱动开发学习
+    clock设置到1G，当前还没有。
+
+tq210v4 下一步uboot的移植工作
+    参考4412 origen板 ，项目中加入spl支持并在u-boot-spl中点灯成功
+
+AM335x
+    完成u-boot-spl移植，进入uboot命令行
+
+NanoPC T3（6818）
+    完成u-boot-spl移植，进入uboot命令行    
+
 rootfs
     busybox 1.29.3 移植到2440并完成运行测试   [2019.1.21]
     移植wolfssl，替换openssl，减少体积
