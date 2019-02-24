@@ -3,6 +3,7 @@
     a)iROM和BL1对soc进行了初始化，并关闭了看门狗，还提供了几个copy函数支持BL1阶段需要的sd卡、mmc等设备访问需求
     b)BL1负责读取BL2，而BL2(u-boot-spl)要实现BL3(u-boot)的读取并跳转到BL2继续执行u-boot
     c)u-boot-spl完成sock的clock和dmc初始化就开始转入u-boot
+    SPL阶段的使命很明确，初始化外存，从外存加载u-boot到ddr内存。《《个人总结
 2、得到了Exynos4412 u-boot工具链，包括sd_fuse    
 3、学会了对SD卡进行区域分配，类似学习jz2440时遇到的的nand part
 4、学会了正确点灯，用点灯来分别调试u-boot-spl阶段和u-boot阶段
