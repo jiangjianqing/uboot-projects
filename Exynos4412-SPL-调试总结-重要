@@ -1,0 +1,128 @@
+【学到的知识】
+1、通过调试掌握了u-boot SPL 的运行模式 , 尤其是4412的BLO (iROM)、BL1(E4412_N.bl1.bin,samsung提供,8k)、 BL2 (u-boot-spl，大小限制在14k-4以内)、BL3(u-boot,较大，300k左右)
+    a)iROM和BL1对soc进行了初始化，并关闭了看门狗，还提供了几个copy函数支持BL1阶段需要的sd卡、mmc等设备访问需求
+    b)BL1负责读取BL2，而BL2(u-boot-spl)要实现BL3(u-boot)的读取并跳转到BL2继续执行u-boot
+    c)u-boot-spl完成sock的clock和dmc初始化就开始转入u-boot
+2、得到了Exynos4412 u-boot工具链，包括sd_fuse    
+3、学会了对SD卡进行区域分配，类似学习jz2440时遇到的的nand part
+4、学会了正确点灯，用点灯来分别调试u-boot-spl阶段和u-boot阶段
+5、掌握了Exynos4系列的启动过程，熟悉了mach-exynos目录下各文件的作用，重要文件有：
+    exynos4_setup.h         >>> 初始化clock和dmc需要的配置信息
+    dmc_init_exynos4.c      >>> 初始化dmc  
+    clock_init_exynos4.c    >>> 初始化clock    
+    lowlevel_init.c         >>> 根据soc的状态来选择要初始化的部分，比如是完全重启还是唤醒，***我觉得这是以后要学习的高级内容***
+6、如何在SPL阶段让串口输出数据
+    1、clock_init_exynos4.c 需要正确设置soc的clock，此时并不涉及dmc_init_exynos4.c
+7、学会了验证DDR内存是否可用的方法
+    在copy_uboot_to_ram内必须加入内存读写测试代码，确定clock和dmc设置正确，内存稳定可用
+8、u-boot-spl和u-boot两个阶段的堆栈地址变量
+    CONFIG_SPL_STACK                《《《     u-boot-spl阶段使用的堆栈地址 ， 必须为iRAM空间
+    CONFIG_SYS_INIT_SP_ADDR         《《《     u-boot 阶段使用的堆栈地址    ， 设为SDRAM空间，调试初期可以设置为与CONFIG_SPL_STACK相同
+9、掌握了SD卡空间分配 
+    保存在board/samsung/origen/origen.h,相关变量的使用是在:
+        copy_uboot_to_ram -- 将u-boot复制到ddr
+        ENV还没有成功使用，待补充
+/*
+ *    SD MMC layout(enable spl ):
+ *    +------------+-----------------+----------------+--------------+-----------------+-----------------+
+ *    |            |                 |                |              |                 |                 |
+ *    |    512B    |      8K(bl1)    |     16k(bl2)   |   16k(ENV)   |  512k(u-boot)   | 92k(trust-zone) |
+ *    |  Reserved  | E4412_N.bl1.bin | u-boot-spl.bin |              |   u-boot.bin    |  E4412_tzsw.bin |
+ *    |            |    block 1~16   |   block 17~48  |  block 49~80 | block 81 ~ 1104 |  block 1105 ~ + |
+ *    +------------+-----------------+----------------+--------------+-----------------+-----------------+
+ *
+ *    SD MMC layout(no     spl ,exynos4412必须使用spl，该表不支持):
+ *    +------------+-----------------+----------------+--------------+-----------------+-----------------+
+ *    |            |                 |                               |                 |                 |
+ *    |    512B    |      8K(bl1)    |             16k(ENV)          |  512k(u-boot)   | 92k(trust-zone) |
+ *    |  Reserved  | E4412_N.bl1.bin |                               |   u-boot.bin    |  E4412_tzsw.bin |
+ *    |            |    block 1~16   |           block 17~48         | block 49 ~ 1072 |  block 1073 ~ + |
+ *    +------------+-----------------+----------------+--------------+-----------------+-----------------+
+ *
+ */
+
+【遇到的坑】
+1、u-boot-spl必须需要设置 CONFIG_SPL_STACK 参数用于分配堆栈，且其空间必须在iRAM空间，因为spl阶段clock和dmc都还没有配置导致ddr不可用
+2、必须在ENTRY(_main) 函数用点灯法对分配的堆栈是否有效进行检查，确认第一个被调用的c函数board_init_f_alloc_reserve正常
+3、soc时钟必须配置正确，否则spl阶段的调试串口无法使用
+4、dmc时钟必须配置正确，否则ddr不稳定导致copy_uboot_to_ram有时成功有时失败 【×《《《当前还在处理的问题》》》》】
+    涉及dmc_init_exynos4.c
+
+【当前状态 2019-02-24】
+1、BL2 (u-boot-spl) clock初始化 uart0初始化成功 ， 位于lowlevel_init.c
+2、BL2 (u-boot-spl) 复制 BL3(u-boot)到ddr 成功，但不稳定，  位于spl_boot.c
+3、BL3(u-boot)点灯成功，确认u-boot复制正确且能够启动
+当前需要解决的是ddr稳定的问题
+
+【Exynos启动涉及的代码文件:】
+arch/arm/cpu/armv7/start.S      整个bin的入口，即执行的第一行代码在这里
+arch/arm/lib/crt0.S             提供_main函数，完成堆栈初始化,u-boot内存重定位
+arch/arm/mach-exynos/spl_boot.c         spl启动的终点，调用do_lowlevel_init完成初始化，将u-boot从sd卡复制到内存，最后会跳转到CONFIG_SYS_TEXT_BASE 地址所在的u-boot继续执行
+arch/arm/mach-exynos/lowlevel_init.c    提供do_lowlevel_init，根据soc的reset_status来确定要执行的动作，负责初始化soc时钟、开启串口、初始化dmc内存控制
+common/board_f.c                u-boot板级初始化
+common/board_r.c                u-boot重定位后的初始化，最后调用main_loop
+common/main.c                   提供main_loop函数，进入u-boot命令环境
+
+Memory Map  - P86   SFR(我认为是special function register)
+iRAM    0x02020000 ~0x02060000      256k
+DDR     0x43xxxx    (待补充)
+【iRam对于u-boot的作用：】
+1、从iROM BLO ～ BL1启动soc，会完成关看门狗、时钟初始化等动作，并提供几个copy函数(c语言可用)地址给uboot读取sd卡、emmc等设备上的uboot数据，这几个函数需要stack支持。
+2、在SPL阶段将作为堆栈使用，SPL阶段虽然也有分配GD的过程，但实际是用不上GD的
+3、在SPL把u-boot从SD卡复制到ddr中时，可以作为buffer使用，但一定要注意分配好区域，不要将该buffer区域与iRAM中已有的代码区、stack区产生冲突。【特别重要】
+
+【如何判断是否已经成功引导了u-boot-spl?】
+arch/arm/cpu/armv7/start.S  是u-boot的启动代码，在bl _main 之前点灯即可。
+
+【如何区分当前是在执行u-boot-spl还是u-boot?】
+arch/arm/lib/crt0.S提供的_main函数开头，就提供了判断方法
+    ENTRY(_main)
+
+    /*
+     * Set up initial C runtime environment and call board_init_f(0).
+     */
+
+    #if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_STACK)      《《CONFIG_SPL_STACK对于SPL启动非常重要，此时DDR无法访问，必须配在iRAM空间（我在这里浪费了不少时间）
+	    ldr	r0, =(CONFIG_SPL_STACK)                   《《《《《《《《《《《《《《《《《《《《      u-boot-spl启动，此时只能将iRAM空间配置为堆栈(0x02060000)
+                                                      *****  在此处点灯用于判断CONFIG_SPL_STACK是否已经设置
+    #else
+	    ldr	r0, =(CONFIG_SYS_INIT_SP_ADDR)            <<<<<<<<<<<<<<<       u-boot启动，将ddr空间配置为堆栈(0x43xxxxxxxx)
+    #endif
+
+/***调试第一步:在此处点灯可以用于判断代码是否进入了_main************************/、
+
+	bic	r0, r0, #7	/* 8-byte alignment for ABI compliance */
+	mov	sp, r0
+	bl	board_init_f_alloc_reserve                   >>>>>>>>>>>>>为GD分配空间,位于common/init/board_init.c
+	mov	sp, r0
+
+/***调试第二部：在此处点灯可以用于判断stack是否设置正确，因为上面的board_init_f_alloc_reserve是c函数，需要stack支持*************************/
+
+	/* set up gd here, outside any C code */
+	mov	r9, r0
+	bl	board_init_f_init_reserve                    >>>>>>>>>>>>初始化GD空间,位于common/init/board_init.c
+
+#if !defined(CONFIG_SPL_BUILD)                       <<<<<<<<<<<判断是u-boot-spl还是u-boot ,这里演示了如何在u-boot阶段点灯
+
+	bl light_led
+#endif
+
+	mov	r0, #0
+	bl	board_init_f                                 >>如果是u-boot-spl,则是其终点，完成初始化后会跳转到u-boot所在地址继续执行
+                                                       位于arch/arm/mach-exynos/spl_boot.c   
+                                                     >>如果是u-boot,则进行剩余的board初始化工作，从代码中可以看出u-boot也可以通过dt初始化，但Exynos没有实现相应的函数。
+                                                       位于common/board_f.c 
+
+    xxxxxxxxxxxxxxxx            (这里的代码会完成u-boot内存重定位)
+
+    	/* call board_init_r */
+#if CONFIG_IS_ENABLED(SYS_THUMB_BUILD)
+	ldr	lr, =board_init_r	/* this is auto-relocated! */
+	bx	lr
+#else
+	ldr	pc, =board_init_r	/* this is auto-relocated! */   >>>>>>>>>>>>>>u-boot进入重定位后的初始化部分
+                                                                          位于common/board_r.c
+#endif                                                                  
+
+点灯函数也要注意上述规则，调试一块需要spl启动支持的soc开发板时需要分两个阶段，第一阶段是调试u-boot-spl(light_led_spl)，第二阶段调试u-boot(light_led).
+

@@ -1,0 +1,84 @@
+启动时默认时钟
+4412user_manual - P97     APLL = MPLL = 400MHZ
+    5 Booting Sequence 
+        > 5.2 Functional Description 
+            > 5.2.2 Scenario Description
+                > 5.2.2.2 PLL and Clock Setting at Booting Time
+
+1s = 1000ms = 1000,000us = 1000,000,000ns = 1000,000,000,000ps    
+
+
+U-BOOT在启动的过程中，需要配置系统时钟。配置系统时钟，大概是以下几个步骤：
+
+（1）设置系统PLL锁定时间
+    输入晶振 = 24Mhz    需要锁定100us     
+（2）配置PLL
+（3）配置各模块分频系数
+（4）切换到PLL时钟
+
+设置 PLL 的流程如下： 的流程如下：
+① 设置PLL的 P、M、S值，这是根据期望得到的频率用公式计算出来
+② 设置PLL的其他控制参数
+③ 使能PLL
+④ PLL会等待一段时间使时钟稳定
+⑤ 设置MUX ，选择PL 所输出的时钟
+简单地说就是： 先设置，再启动，后使用。
+第 5点意味着：如果当前正使用该PLL，那么先设置 MUX 改用其他时钟源或禁止使用此 PLL，设置完PLL后再设置MUX改回原来所使用的PLL时钟。
+
+推荐电压(recommended voltage) -- p2792
+tiny4412开发板的VDD_ARM是接的1.3V，所以是可以跑1.4GHz。VDD_MPLL等等是接1.1V
+
+s5p4412 PLL_LOCK 最大值(输入晶振 24Mhz):  - P2798   Clock Timing Constants
+APLL_LOCK    100(us)    ticks = (24Mhz/1000,000us) * 100us = 2400 = 0x960  （如果外部晶振是24MHz，100us换算成tick就是2400个tick）
+MPLL_LOCK    400        ticks = 0x190      
+EPLL_LOCK    3000       ticks = 0xBB8
+VPLL_LOCK    400        ticks = 0x190
+
+
+Fout = (Fin * M) / (P*2^S)
+
+APLL and MPLL PMS Value:
+Fin(MHz)    TargetFout(MHz)     P       M       S               Fout(MHz)
+24              1400            3      175      0               1400 
+APLL_LOCK_VAL = 270 * PDIV = 810 = 0x32a
+
+EPLL PMS Value:  EPLL产生192MHz的时钟提供给音频子系统  -- P452
+Fin(MHz)    TargetFout(MHz)     P       M       S       K       Fout(MHz)
+24              192             2       64      2       0       192
+EPLL_LOCK_VAL  =  (EPLL_PDIV * 3000) = 2 * 3000 = 6000 = 0x1770
+
+VPLL PMS Value:  VPLL产生54MHz时钟给G3D。 
+Fin(MHz)    TargetFout(MHz)     P       M       S       K       MFR     MRR     SSCG_EN
+24                  ?           3       ?       ?       0       -       -       0
+VPLL_LOCK_VAL  = (VPLL_PDIV * 3000) = 0x1770
+
+USB Device PHY 使用XUSBXTI 产生 30 and 48 MHz 的时钟。
+HDMI PHY 使用 XUSBXTI 产生 54 MHz 的时钟。
+
+1.4 典型应用配置：
+    A9 MPCore，CoreSight，HPM使用APLL
+    DRAM， system bus clocks，其他外设例如audio IPs和SPI使用MPLL和EPLL
+    Video时钟使用VPLL
+    G3D使用MPLL或VPLL作为输入时钟源
+
+1.5 命名规则
+
+FINpll
+: pll的输入时钟
+FOUTpll : pll的输出时钟
+MOUTxpll : xpll经过mux的输出时钟
+SCLKxpll : pad上的xpll时钟，可能经过了dividor，也可能就是MOUTxpll，譬如MUX_MPLL的输出，刚看的时候可能会疑惑。
+DOUTxxx : dividor的输出时钟
+
+   
+
+
+名词解释：
+(晶振，全名晶体振荡器，成份石英(二氧化硅)，晶振用于通过压电效应给CPU提出振荡频率，再通过别的电路，将例如正弦曲线波转换成方波，相当于CPU的起搏器，有了晶振，CPU才有频率输出)。
+CPU输出比如24Hz频率后，此时，就需要把频率放大了(否则CPU才24Hz的频率能干吗呢？)，在频率放大的过程中，首先需要考虑的一个问题就是----phase-locked loop锁相环。简单的说，比如复位后，CPU默认工作频率在400Hz，现在需要升到1000Hz工作，那么从400-->1000Hz需要一个过程，假设为时间t1，在t1这段时间内，CPU的频率是变化的，那么CPU的状态就是不稳定的，此时，就需要把频率锁定，设置锁定时间，直到CPU稳定的输出频率。
+
+s5pv210初始时钟：
+CPU第一次启动时，PLL有一个默认的初始值，芯片手册找到P522页，找到默认的初始频率：
+• APLL: M=200, P=6, S=1 FOUT = (MDIV X FIN )/ (PDIV X 2(SDIV-1))) = 800MHz
+• MPLL: M=667, P=12, S=1 FOUT = (MDIV X FIN) / (PDIV X 2SDIV) = 667MHz
+• EPLL: M=80, P=3, S=3, K=0 FOUT = ((MDIV+KDIV) X FIN) / (PDIV X 2SDIV) = 80MHz 

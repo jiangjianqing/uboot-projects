@@ -82,10 +82,10 @@ arch/arm/lib/crt0.S            #提供ENTRY(_main),是32位汇编代码，还存
             xxx
 	    ldr	r0, =(CONFIG_SYS_INIT_SP_ADDR)  # CONFIG_SYS_INIT_SP_ADDR =	(CONFIG_SYS_SDRAM_BASE + 0x1000 - GENERATED_GBL_DATA_SIZE)
 	    bic	r0, r0, #7	/* 8-byte alignment for ABI compliance */
-	    mov	sp, r0
+	    mov	sp, r0      /*重要：为C函数配置运行堆栈，否则下面的board_init_f_alloc_reserve将无法运行*/
         bl	board_init_f_alloc_reserve
 #common/init/board_init.c
-            board_init_f_alloc_reserve( CONFIG_SYS_INIT_SP_ADDR )
+            board_init_f_alloc_reserve( ulong top /*堆栈顶端位置*/ )，这里将为GD预留空间，并返回GD的指正，此时sp = gd , 因为sp是向下增长的
         mov	sp, r0                      #sp指向gd地址，向下分配
 	    /* set up gd here, outside any C code */
 	    mov	r9, r0                      #r9被专用于保存gd地址
