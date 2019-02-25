@@ -1,12 +1,21 @@
 学习过程计划：
     入门，通过为jz2440移植uboot、kernel、rootfs，掌握了嵌入式linux基本移植过程【完成于2019.02.03,板已出】    
     通过为tiny4412移植uboot掌握了u-boot-spl 【完成于2019.02.23】
-    通过为米尔科技AM335x移植uboot，kernel 、rootfs 掌握设备树  【当前目标】
+    为tq210v4移植uboot（参考板 4412 origen），为其建立spl工具链 ,kernel rootfs ,掌握设备树、lcd移植 【当前目标】
+    通过为米尔科技AM335x移植uboot，kernel 、rootfs 掌握设备树  
     为NanoPC T3（6818y）移植uboot，掌握soc的clock 、dmc设置
-    为tq210v4移植uboot（参考板 4412 origen），为其建立spl工具链 
     tqimx6q移植uboot mmc配置功能，移植dnw，   kernel、rootfs，
     
-    
+驱动学习目标：
+    lcd移植（tq210v4 和 tqimx6q）
+    i2c操作
+
+最后准备保留的开发板：
+    tqimx6q (车载，android)
+    AM335x  (工业控制，linux+qt)
+    NanoPC T3 (放单位使用，linux+qt)
+
+
 
 
 uboot 命令框架移植到fswing
