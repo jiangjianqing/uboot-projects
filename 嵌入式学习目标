@@ -11,9 +11,9 @@
     i2c操作
 
 最后准备保留的开发板：
-    tqimx6q (车载，android)
-    AM335x  (工业控制，linux+qt)
-    NanoPC T3 (放单位使用，linux+qt)
+    tqimx6q (车载，a9+emmc+ddr3,android)
+    AM335x  (工业控制,a8+nand+ddr3，linux+qt)
+    NanoPC T3 (放单位使用 a53+emmc+ddr3，linux+qt)
 
 
 
