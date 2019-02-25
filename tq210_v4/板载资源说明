@@ -7,7 +7,7 @@ tiny210 v4板子上有如下存储介质：
 
 启动各阶段及运行运行地址如下：
 阶段 	运行地址
-BL0 	0x0000_0000（固定）             iROM   ，初始化系列操作，将BL1将在到SRAM
+BL0 	0x0000_0000（固定）             iROM   ，初始化系列操作，将BL1将在到SRAM,S5PV210 上电运行 iROM 中的代码已经设置好栈，栈顶地址为 0xD0037F80，
 BL1 	0xD002_0000（固定）             SRAM,u-boot-spl.bin  ,负责初始化SDRAM，clock
 BL2 	0x3000_0000（可在代码中进行修改）  SDRAM,u-boot.bin, 执行uboot主流程
 
