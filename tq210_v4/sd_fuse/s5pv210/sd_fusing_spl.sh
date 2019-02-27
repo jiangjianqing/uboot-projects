@@ -57,9 +57,9 @@ fi
 ####################################
 # fusing images
                         #block0 Reserved，保存dos分区表     共512B
-signed_bl1_position=1   #block   1 ~ 32   ( 32k)    保存xxx-spl.bin,       
-                        #block  33 ~ 64   ( 32k)    保存ENV,       
-uboot_position=65       #block  65 ~ 1088 (512k)    保存u-boot.bin        
+signed_bl1_position=1   #block   1 ~ 32   ( 16 KiB)    保存xxx-spl.bin,       
+                        #block  33 ~ 64   ( 16 KiB)    保存ENV,       
+uboot_position=65       #block  65 ~ 1088 (512 KiB)    保存u-boot.bin        
 
 #<BL1 fusing>
 echo "---------------------------------------"
