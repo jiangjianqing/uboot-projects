@@ -5,6 +5,9 @@ uboot-samsung soc加入spl支持的标准方式（参考tiny4412 origen实现）
 	    select OF_CONTROL
 	    select SUPPORT_SPL
 
+    config SPL_LDSCRIPT
+	    default "board/samsung/common/exynos-uboot-spl.lds"         #使用samsung的链接脚本
+
 2、在board/s5p_goni_defconfig加入spl编译支持
     CONFIG_SPL=y
     CONFIG_SPL_FRAMEWORK=n    #这一项是必须的，否则Kconfig会默认将common/spl下的内容进行编译，samsung soc都不需要这个
@@ -20,7 +23,7 @@ uboot-samsung soc加入spl支持的标准方式（参考tiny4412 origen实现）
     board/samsung/$(BOARD)/tools/mk$(BOARD)spl.c
     特别注意：uboot编译生成的u-boot-spl.bin刚好在开头有16byte的空白空间，所以我对mk$(BOARD)spl.c进行了修改，其内部不在额外分配该Header Info数据空间
     
-4、修改include/configs/$(BOARD).h,加入spl 链接需要的两个参数
+4、修改include/configs/$(BOARD).h,加入spl 链接需要的两个参数,此参数在上面的exynos-uboot-spl.lds中使用
     #define CONFIG_SPL_TEXT_BASE		0xd0020010          #s5pv210要求BL1启动代码从该地址开始，0xd0020000 - 0xd0020010 称为 Header Info
     #define CONFIG_SPL_MAX_FOOTPRINT	(16 * 1024)
 

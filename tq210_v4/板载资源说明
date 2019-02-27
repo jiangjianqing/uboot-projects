@@ -42,7 +42,7 @@ Memory Map
 0x2000_0000 	0x3FFF_FFFF 	512MB 	DRAM 0
 0x4000_0000 	0x7FFF_FFFF 	1024MB 	DRAM 1
 0xD000_0000 	0xD000_FFFF 	64KB 	IROM
-0xD002_0000 	0xD003_7FFF 	96KB 	IRAM
+0xD002_0000 	0xD003_7FFF 	96KB 	IRAM        芯片手册 P21 写的范围是到0xD003_FFFF（128K），估计是芯片手册有误
 
 具体参考：
 https://blog.csdn.net/ooonebook/article/details/52916202
