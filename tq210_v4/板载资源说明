@@ -1,48 +1,47 @@
-tiny210 v4板子上有如下存储介质：
+tq210 v4板子上有如下存储介质：
+    s5pv210属于armv7 cpu 
+    板载晶振24MHZ,另有27MHz晶振用于显示
     64KB的IROM
     94KB的内部SRAM
     1GB的DDR
     1GB的nand flash支持
-    SD card（自己插了一个4GB的SD卡）
+    DM9000AE网卡
+    SD card
 
 启动各阶段及运行运行地址如下：
 阶段 	运行地址
 BL0 	0x0000_0000（固定）             iROM   ，初始化系列操作，将BL1将在到SRAM,S5PV210 上电运行 iROM 中的代码已经设置好栈，栈顶地址为 0xD0037F80，
 BL1 	0xD002_0000（固定）             SRAM,u-boot-spl.bin  ,负责初始化SDRAM，clock
-BL2 	0x3000_0000（可在代码中进行修改）  SDRAM,u-boot.bin, 执行uboot主流程
+BL2 	0x2000_0000（可在代码中进行修改）  SDRAM,u-boot.bin, 执行uboot主流程
 
 BL1（u-boot-spl）镜像最大为16KB。
+
+【调试串口】
+使用UART0
+CONFIG_DEBUG_UART_BASE=0xe2900000
+CONFIG_DEBUG_UART_CLOCK=66700000        #使用PCLK_MSYS频率，通过寄存器设置
 
 【BL1的运行地址】
 BL1是加载在0xD002_0000的位置上（不包括USB启动的方法），并不是说BL1就是从0xD002_0000开始运行的。0xD002_0000开始的16B是用于作为BL1的header。BL1代码的实际运行地址是0xD002_0010
 这部分header是用来给BL0验证BL1的镜像的有效性使用的。16B的header格式如下：
-地址 	数据
+地址 	        数据
 0xD002_0000 	BL1镜像包括header的长度
 0xD002_0004 	保留，设置为0
 0xD002_0008 	BL1镜像除去header的校验和
 0xD002_000c 	保留，设置为0
 当从存储介质上加载BL1镜像的时候（非UART/USB模式），需要校验这个header和BL1的镜像是否匹配。
 
-【BL2的运行地址】
-上述已经知道BL2在SDRAM的地址空间中运行,SDRAM空间如下：
-起始地址 	结束地址 	长度 	映射区域描述
-0x2000_0000 	0x3FFF_FFFF 	512MB 	DRAM 0
-0x4000_0000 	0x7FFF_FFFF 	1024MB 	DRAM 1
-
-tiny210的ddr是512M并且使用的是DRAM0的地址空间，故BL2的运行空间是
-起始地址 	结束地址 	长度 	映射区域描述
-0x2000_0000 	0x3FFF_FFFF 	512MB 	DRAM 0
-
-但是在实际使用中，我把uboot加载到了ddr上0x23E0_0000（具体参考CONFIG_SYS_TEXT_BASE的定义）的地址上
-
-
-Memory Map
+【Memory Map】
 起始地址 	        结束地址 	        长度 	映射区域描述
 0x0000_0000 	0x1FFF_FFFF 	512MB 	Boot area（取决于启动模式）
 0x2000_0000 	0x3FFF_FFFF 	512MB 	DRAM 0
 0x4000_0000 	0x7FFF_FFFF 	1024MB 	DRAM 1
 0xD000_0000 	0xD000_FFFF 	64KB 	IROM
 0xD002_0000 	0xD003_7FFF 	96KB 	IRAM        芯片手册 P21 写的范围是到0xD003_FFFF（128K），估计是芯片手册有误
+
+tq210v4的ddr是1024M并且使用的是DRAM0\DRAM1的地址空间，故BL2的运行空间是
+起始地址 	        结束地址 	        长度 	映射区域描述
+0x2000_0000 	0x6000_0000 	1024MB 	DRAM 0
 
 具体参考：
 https://blog.csdn.net/ooonebook/article/details/52916202
