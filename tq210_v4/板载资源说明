@@ -1,5 +1,4 @@
 tq210 v4板子上有如下存储介质：
-    s5pv210属于armv7 cpu 
     板载晶振24MHZ,另有27MHz晶振用于显示
     64KB的IROM
     94KB的内部SRAM
