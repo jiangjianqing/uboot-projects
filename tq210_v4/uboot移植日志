@@ -1,8 +1,16 @@
 【内存分配信息】：
-    0x20000000  kernel启动地址
-                #为kernel预留8M空间（0x20000000 ~ 0x20800000）
+    0x20000000  内存起始地址
+    0x20000100  kernel启动参数地址   通过语句 gd->bd->bi_boot_params = PHYS_SDRAM_1 + 0x100; 设置，uboot启动内核的形式theKernel (0, machid, bd->bi_boot_params)，kernel默认也会从该地址加载启动参数
+                给bi_boot_params预留 [2MB - 0x100byte]空间
+    0x20200000  kernel启动地址
+           --      #为kernel预留6M空间（0x20200000 ~ 0x20800000）
     0x20800000  u-boot启动地址
-    0x60000000  内存最大地址(0x60000000 - 0x20000000 = 0x40000000 = 1GB)    
+           --       【kernel可用内存空间】
+    0x5FFFFxxx  堆栈指针
+           --       u-boot  gd数据区 (大小为gd结构体的大小) 
+    0x60000000  内存最大地址(0x60000000 - 0x20000000 = 0x40000000 = 1GB)   
+由上图可知，真个内存的可用空间 = 1GB - gd数据区大小 - kernel启动参数数据区大小 - 0x100
+ 
 
 2019.03.07
     make dtbs 编译设备树成功
@@ -40,6 +48,8 @@
             arm/boot/dts/s5pv210-torbreck.dts:9: * Board device tree source for Torbreck board.
             arm/boot/dts/s5pv210-torbreck.dts:25:	model = "aESOP Torbreck based on S5PV210";
 
+    【内存空间分配犯错】：
+        错误的将kernel的启动地址设置为0x20000000，导致kernel启动参数区被覆盖，这样会导致kernel无法启动。
 
 2019.03.06
     编译kernel ,遇到问题：Specify LOADADDR on the commandline to build an uImage
