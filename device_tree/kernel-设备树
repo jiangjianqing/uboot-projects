@@ -1,0 +1,27 @@
+make dtbs
+#在编译linux内核时。也可以直接make dtbs生成dtb文件
+
+linux下执行：sudo apt-get install device-tree-compiler安装dtc工具。其中还提供了一个fdtdump的工具，可以反编译dtb文件。dts和dtb文件的转换如图所示。 
+dtc工具的使用方法是：dtc –I dts –O dtb –o xxx.dtb xxx.dts，即可生成dts文件对应的dtb文件了。 
+
+编译
+
+make dtbs CROSS_COMPILE=arm-none-linux-gnueabi-
+
+反编译
+
+ dtc -I dtb -O dts -o tmp.dts s5pv210-x210.dtb 
+
+查看tmp.dts文件即为反编译生成的文件
+
+
+Name 	API Level 	            Linux Kernel in AOSP
+Android Api 28 	28 	
+Android 8.1(Oreo) 	27 	
+Android 8.0(Oreo) 	26 	
+Android 7.1.1(Nougat) 	25 	
+Android 7.0(Nougat) 	24 	
+Android 6.0(Marshmallow) 	23 	3.18.10
+Android 5.1(Lollipop) 	22 	    3.16.1
+Android 5.0(Lollipop) 	21 	    3.16.1
+

@@ -1,20 +1,59 @@
+【内存分配信息】：
+    0x20000000  kernel启动地址
+                #为kernel预留8M空间（0x20000000 ~ 0x20800000）
+    0x20800000  u-boot启动地址
+    0x60000000  内存最大地址(0x60000000 - 0x20000000 = 0x40000000 = 1GB)    
+
+2019.03.07
+    make dtbs 编译设备树成功
+    晚上准备使用设备树引导kernel
+    **遇到问题**：uboot 引导 kernel时，显示start kernel 。。。后没有串口输出的问题：
+        表象：
+            make ARCH=arm menuconfig无法配置samsung串口
+        分析过程:
+            在defconfig中发现如下两个配置项，其中CONFIG_DEBUG_S3C_UART在arch/arm/include/debug/s5pv210.S中使用
+            CONFIG_S3C_LOWLEVEL_UART_PORT=0
+            CONFIG_DEBUG_S3C_UART=0
+        根因分析:
+            最终发现是因为我为了精简目录而修改arch/arm/Kconfig时差生的错误。检验是否正确的标志是在 .config中出现如下三行:
+            CONFIG_DEBUG_S3C_UART=0     #使用的调试串口号
+            CONFIG_DEBUG_S5PV210_UART=y
+            CONFIG_DEBUG_LL_INCLUDE="debug/s5pv210.S"
+
+        >*****s5pv210在defconfig中正确配置调试串口的方法*****：
+            #代码中并没有发现有地方使用CONFIG_S3C_LOWLEVEL_UART_PORT
+            CONFIG_S3C_LOWLEVEL_UART_PORT=1
+            #这么使用 CONFIG_DEBUG_S3C_UART 不正确，该值由Kconfig自动生成
+            ##CONF IG_DEBUG_S3C_UART=1
+            #s5pv210正确配置调试串口的方法，使用UART0,修改为UART1的方式:CONFIG_DEBUG_S3C_UART1=y
+            CONFIG_DEBUG_S3C_UART0=y	
+        【教训】：
+            Kconfig配置文件修改后一定一定要与未修改的进行对比，这次在此问题上浪费了半天！！！！
+        【得到经验】：
+            一开始不要对kernel中的Kconfig进行任何修改，直到调试串口输出正常为止               
+
 2019.03.06
-    
+    编译kernel ,遇到问题：Specify LOADADDR on the commandline to build an uImage
+        解决办法：命令行加入 LOADADDR=0x80008000 ，也可以加入环境变量，作用相同
+    待验证:在s5pv210_defconfig 中设置 CONFIG_S3C_LOWLEVEL_UART_PORT=0,确保调试串口正确输出
+    CONFIG_CMD_FAT=n  暂时设为n
+    加入CONFIG_CMD_NFS,引导kernel成功，但kernel的调试串口还没有配置  
+
 
 2019.03.05
     *检查4412设备树文件，发现串口地址写的不正确，修正后重新尝试是否能进入uboot命令行
     DM9000网卡正常,解决第一次ping失败、id读取错误的问题（连续ping则后面的操作都能成功）：  最终原因应该是soc速度过快导致时序问题，毕竟dm9000比较老
         解决方法：
             >>>>>>drivers/net/dm9000x.c :  dm9000_reset : 273行加入：
-            udelay(60);/*add by jjq,经测试60us可以确保成功解决 第一次ping无法成功、id读取错误的问题的问题*/
+            udelay(110);/*add by jjq,解决第一次ping无法成功、id读取错误的问题的问题*/
         根因分析：
             dm9000_reset应该是对网卡进行操作前的复位，其每个动作都会利用udelay进行延时，唯独最后if ((DM9000_ior(DM9000_PIDL) != 0x0) ||  之前没有进行延时。
             jz2440当时没有出现这个问题，估计是s5pv210的速度比2440快很多，导致操作时序出现问题，在该操作前加入延时即可解决。
     
-    移植nand成功,以s3c2440_nand.c为蓝本,卡在NAND:
+    移植nand成功,以s3c2440_nand.c为蓝本将其改为tq210v4_nand.c(因为其包含board_nand_init函数，属于与板级密切相关),但启动卡在NAND:
         问题排查：
             在include/log.h : 126 启用DEBUG看看问题出现在哪里 #define DEBUG		/*2019.03.06为调试Nand移植而加入*/
-
+            猜测为初始化有问题
 
     尝试用设备树配置网卡，涉及配置项CONFIG_DM_ETH
     
