@@ -30,7 +30,16 @@
         【教训】：
             Kconfig配置文件修改后一定一定要与未修改的进行对比，这次在此问题上浪费了半天！！！！
         【得到经验】：
-            一开始不要对kernel中的Kconfig进行任何修改，直到调试串口输出正常为止               
+            一开始不要对kernel中的Kconfig进行任何修改，直到调试串口输出正常为止        
+
+    【重要发现】kernel 4.x和 kernel 3.x 在板选择方面有很大差别，4.x都由设备树决定
+        在 3.16 arch/arm 目录下搜索 Torbreck 发现其在menuconfig中可以选择支持的板，
+            arm/mach-s5pv210/Kconfig:179:	bool "Torbreck"
+            arm/mach-s5pv210/Kconfig:195:	  Machine support for aESOP Torbreck
+       在 4.4 arch/arm目录中已经从Kconfig搜索不到该信息，仅在dts文件中找到
+            arm/boot/dts/s5pv210-torbreck.dts:9: * Board device tree source for Torbreck board.
+            arm/boot/dts/s5pv210-torbreck.dts:25:	model = "aESOP Torbreck based on S5PV210";
+
 
 2019.03.06
     编译kernel ,遇到问题：Specify LOADADDR on the commandline to build an uImage
