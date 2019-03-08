@@ -1,20 +1,28 @@
 【内存分配信息】：
     0x20000000  内存起始地址
     0x20000100  kernel启动参数地址   通过语句 gd->bd->bi_boot_params = PHYS_SDRAM_1 + 0x100; 设置，uboot启动内核的形式theKernel (0, machid, bd->bi_boot_params)，kernel默认也会从该地址加载启动参数
-                给bi_boot_params预留 [2MB - 0x100byte]空间
+           --       预留空间: 1MB - 0x100byte
+    0x20100000  kernel设备树地址      
+           --      预留空间: 1MB
     0x20200000  kernel启动地址
-           --      #为kernel预留6M空间（0x20200000 ~ 0x20800000）
+           --      #为kernel预留空间（0x20200000 ~ 0x20800000）
     0x20800000  u-boot启动地址
            --       【kernel可用内存空间】
     0x5FFFFxxx  堆栈指针
            --       u-boot  gd数据区 (大小为gd结构体的大小) 
     0x60000000  内存最大地址(0x60000000 - 0x20000000 = 0x40000000 = 1GB)   
-由上图可知，真个内存的可用空间 = 1GB - gd数据区大小 - kernel启动参数数据区大小 - 0x100
+由上图可知，整个内存的可用空间 = 1GB - gd数据区大小 - kernel启动参数数据区大小 - 0x100
  
+
+2019.03.08
+    使用bootm 0x20200000 - 0x20100000 成功启动kernel，console字符串显示正常。但还存在不正常的情况：
+        1、PLL读取值都为0
+        2、卡在启动过程
+        此时machid并不正确，改为以下正确值试试看
+        arch/arm/tools/mach-types:435:smdkv210		MACH_SMDKV210		SMDKV210		2456        0x998
 
 2019.03.07
     make dtbs 编译设备树成功
-    晚上准备使用设备树引导kernel
     **遇到问题**：uboot 引导 kernel时，显示start kernel 。。。后没有串口输出的问题：
         表象：
             make ARCH=arm menuconfig无法配置samsung串口
