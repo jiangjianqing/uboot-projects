@@ -20,6 +20,12 @@
         2、卡在启动过程
         此时machid并不正确，改为以下正确值试试看
         arch/arm/tools/mach-types:435:smdkv210		MACH_SMDKV210		SMDKV210		2456        0x998
+    在arch/arm/boot/dts/s5pv210-smdkv210.dts中发现一句注释：
+        13 ： support. Due to lack of hardware, _no_ testing has been performed.
+    增加tq210v4专用的设备树文件：s5pv210-tq210v4.dts
+    因此我用该文件生成的dtb去启动kernel，遇到问题也在情理之中。
+    晚上不使用设备树再试验一次
+    
 
 2019.03.07
     make dtbs 编译设备树成功
