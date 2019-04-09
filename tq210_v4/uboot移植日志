@@ -2,17 +2,22 @@
     0x20000000  内存起始地址
     0x20000100  kernel启动参数地址   通过语句 gd->bd->bi_boot_params = PHYS_SDRAM_1 + 0x100; 设置，uboot启动内核的形式theKernel (0, machid, bd->bi_boot_params)，kernel默认也会从该地址加载启动参数
            --       预留空间: 1MB - 0x100byte
-    0x20100000  kernel设备树地址      
+    0x20100000  u-boot启动地址
+           --       预留空间: 1MB
+    0x20200000  kernel设备树地址      
            --      预留空间: 1MB
-    0x20200000  kernel启动地址
+    0x20300000  kernel启动地址
            --      #为kernel预留空间（0x20200000 ~ 0x20800000）
-    0x20800000  u-boot启动地址
-           --       【kernel可用内存空间】
     0x5FFFFxxx  堆栈指针
            --       u-boot  gd数据区 (大小为gd结构体的大小) 
     0x60000000  内存最大地址(0x60000000 - 0x20000000 = 0x40000000 = 1GB)   
 由上图可知，整个内存的可用空间 = 1GB - gd数据区大小 - kernel启动参数数据区大小 - 0x100
  
+
+2019.03.09
+    编译kernel 3.16.62成功， 使用set machid 0x998正确进入kernel，kernel 3.16 中依然有s5pv210的代码初始化部分，并不需要dtb支持。
+    正确设置kernel 3.16.62的nfs配置后，启动nfs成功，rootfs使用kernel一样的编译器成功可用。（jz2440的rootfs只能使用arm-linux-gcc 4.4.3）
+    下一步考虑是使用kernel 4.4 +dtb的方式同样完成nfs rootfs的启动
 
 2019.03.08
     使用bootm 0x20200000 - 0x20100000 成功启动kernel，console字符串显示正常。但还存在不正常的情况：
