@@ -51,7 +51,7 @@
            1409 808013ac:   fb00395b    blx 8080f922 <red_led_on>
            1410 808013b0:   e1a00009    mov r0, r9
            1411 808013b4:   e5991038    ldr r1, [r9, #56]   ; 0x38
-           1412 808013b8:   e59fe00c    ldr lr, [pc, #12]   ; 808013cc <here+0x40>          ##跳转到board_init_r
+           1412 808013b8:   e59fe00c    ldr lr, [pc, #12]   ; 808013cc <here+0x40>          ##注意，用的ldr lr, [pc, #12],跳转到board_init_r
            1413 808013bc:   e12fff1e    bx  lr
            1414 808013c0:   4030ff20    eorsmi  pc, r0, r0, lsr #30
            1415 808013c4:   8086ba18    addhi   fp, r6, r8, lsl sl
@@ -65,7 +65,7 @@
 
         tq210_v4:u-boot.dis:_main
           1485 20101474:   e5991038    ldr r1, [r9, #56]   ; 0x38
-          1486 20101478:   e59ff004    ldr pc, [pc, #4]    ; 20101484 <here+0x38>
+          1486 20101478:   e59ff004    ldr pc, [pc, #4]    ; 20101484 <here+0x38>           #注意，与上面不同，用的是ldr pc,[pc,#4]
           1487 2010147c:   201591d0            ; <UNDEFINED> instruction: 0x201591d0
           1488 20101480:   2015f75c    andscs  pc, r5, ip, asr r7  ; <UNPREDICTABLE>
           1489 20101484:   2010f768    andscs  pc, r0, r8, ror #14
