@@ -1,0 +1,102 @@
+【内存分配信息】：
+    ...待填充
+
+
+ 
+2019.04.12
+    重要发现：
+        am335x的spl与s5pv210等都有很大差别，其并没有直接使用common/spl的代码，而是在spl目录中重新构建了一份，重点是：CONFIG_SPL_BUILD是通过命令行传递给编译器的。
+        因此，需要在Eclipse CPP中添加一个 Preprocessor Macro ： CONFIG_SPL_BUILD ，然后才能正确阅读代码。
+    理清spl启动过程：
+        arch/arm/cpu/armv7/start.S          #CONFIG_SKIP_LOWLEVEL_INIT,所以armv7/lowlevel_init.S没有编译
+                :bl	_main
+            arch/arm/lib/crt0.S : _main()
+                    :ldr	r0, =(CONFIG_SYS_INIT_SP_ADDR)  #0x40310000 - 224 = 0x40310000 - 0xE0 = 0x4030FF20
+                        ...
+                    :bl board_init_f
+                        arch/arm/mach-omap2/am33xx/board.c : board_init_f()     #掌握技巧：通过反编译u-boot-spl确定
+                    ...
+                    :bl board_init_r
+                        common/spl/spl.c : board_init_r()
+    开启DEBUG遇到问题：
+        arm-linux-gnueabihf-ld.bfd: u-boot-spl section `.rodata' will not fit in region `.sram'
+        arm-linux-gnueabihf-ld.bfd: region `.sram' overflowed by 11364 bytes
+        scripts/Makefile.spl:384: recipe for target 'spl/u-boot-spl' failed
+        make[1]: *** [spl/u-boot-spl] Error 1    
+        #看起来是大小超出范围，因此无法使用DEBUG
+    
+    使用debug串口：
+            在include/debug_uart.h 中定义了规则
+                /**
+                 * debug_uart_init() - Set up the debug UART ready for use
+                 *
+                 * This sets up the UART with the correct baud rate, etc.
+                 *
+                 * Available CONFIG is:
+                 *
+                 *    - CONFIG_DEBUG_UART_BASE: Base address of UART
+                 *    - CONFIG_BAUDRATE: Requested baud rate
+                 *    - CONFIG_DEBUG_UART_CLOCK: Input clock for UART
+                 */
+        #define CONFIG_DEBUG_UART_OMAP		//#开启调试串口，arch/arm/mach-omap2/am33xx/board.c : early_system_init()
+        #ifdef CONFIG_DEBUG_UART_OMAP
+        //#include <hardware_am33xx.h>
+        #define CONFIG_DEBUG_UART_BASE		0x44E09000	//UART0_BASE
+        #define CONFIG_DEBUG_UART_SHIFT		0			//如何计算？
+        #define CONFIG_DEBUG_UART_CLOCK		10000000	//如何计算？？ drivers/serial/serial_omap.c:70:48: error: ‘CONFIG_DEBUG_UART_CLOCK’ undeclared 
+        #endif
+
+    遇到问题，_main中board_init_r的地址无法与目标地址对应，总是差了1
+        myb-am335x:u-boot.dis:_main
+           1409 808013ac:   fb00395b    blx 8080f922 <red_led_on>
+           1410 808013b0:   e1a00009    mov r0, r9
+           1411 808013b4:   e5991038    ldr r1, [r9, #56]   ; 0x38
+           1412 808013b8:   e59fe00c    ldr lr, [pc, #12]   ; 808013cc <here+0x40>          ##跳转到board_init_r
+           1413 808013bc:   e12fff1e    bx  lr
+           1414 808013c0:   4030ff20    eorsmi  pc, r0, r0, lsr #30
+           1415 808013c4:   8086ba18    addhi   fp, r6, r8, lsl sl
+           1416 808013c8:   808883b4            ; <UNDEFINED> instruction: 0x808883b4
+           1417 808013cc:   8080fb95    umullhi pc, r0, r5, fp  ; <UNPREDICTABLE>           ##8080fb95与8080fb94 地址对应不上 ,因此存在问题
+
+          24943 8080fb94 <board_init_r>:            ##
+          24944 8080fb94:   b508        push    {r3, lr}
+
+
+
+        tq210_v4:u-boot.dis:_main
+          1485 20101474:   e5991038    ldr r1, [r9, #56]   ; 0x38
+          1486 20101478:   e59ff004    ldr pc, [pc, #4]    ; 20101484 <here+0x38>
+          1487 2010147c:   201591d0            ; <UNDEFINED> instruction: 0x201591d0
+          1488 20101480:   2015f75c    andscs  pc, r5, ip, asr r7  ; <UNPREDICTABLE>
+          1489 20101484:   2010f768    andscs  pc, r0, r8, ror #14
+
+         16646 2010f768 <board_init_r>:
+         16647 2010f768:   e92d4010    push    {r4, lr}
+
+
+    下一步计划：灭灯法测试spl执行流程，确保MLO文件已经被加载
+
+2019.04.11
+    清理u-boot目录：
+        arch
+        arch/arm/cpu
+        arch/arm/cpu/armv7
+        arch/arm/dts
+        arch/arm/include/asm
+        board
+        configs
+        include/configs
+
+    新发现：
+        uboot内部已经为boot阶段的【点灯调试法】预留了接口，在crt0.S ： 145行：
+            #if ! defined(CONFIG_SPL_BUILD)
+	            bl coloured_LED_init
+	            bl red_led_on
+            #endif
+        其_weak定义在board_f.c中，我们只要在自己的代码中重新实现这些函数即可
+
+2019.04.10
+    创建项目：u-boot-2019.04-myd-am335x
+    配置文件：am335x_evm_defconfig
+
+
