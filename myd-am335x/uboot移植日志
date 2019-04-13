@@ -80,10 +80,16 @@
     
     问题解决：
         错误：
+            编译米尔官方的u-boot 2016.05的设备树出现错误提示：Your dtc is too old, please upgrade to dtc 1.4 or newer
+                u-boot 2016.05需要单独安装dtc
+        解决步骤：
+            sudo apt-get install device-tree-compiler
+
+        错误：
             spl: could not find mmc device 0. error: -19
         解决步骤：
             1、CONFIG_DM_MMC=n           关闭MMC的dm驱动
-            2、CONFIG_MMC_OMAP_HS=y      启用传统驱动方式（u-boot-2019.04的方式，在u-boot2016.05中是CONFIG_OMAP_HSMMC）
+            2、CONFIG_MMC_OMAP_HS=y      启用传统驱动方式（u-boot-2019.04的定义，在u-boot2016.05中是CONFIG_OMAP_HSMMC）
 
         错误：
             fdt_record_loadable: FDT_ERR_BADMAGIC
@@ -95,11 +101,11 @@
         解决步骤：
             到windows下用diskgenius重新分区，第一个分区设为fat32并设置为活动分区，大小为4g（大小看情况，后续分区再处理）
     
-    解决上述问题后，在tf卡的活动fat32分区中放入以下四个文件，即可启动进入u-boot:
+    解决上述问题后，在tf卡的活动fat32分区中放入以下文件，即可启动进入u-boot:
         1、MLO                   #从u-boot-spl.bin转换而来
         2、u-boot.img            #从u-boot.bin转换而来
-        3、*myd_y335x.dtb        #当前尚未成功使用，从米尔科技官方uboot中取出        
-        4、*uEnv.txt             #当前尚未成功使用，从米尔科技官方uboot中取出
+        -----3、*myd_y335x.dtb        #当前尚未成功使用，从米尔科技官方uboot中取出        
+        -----4、*uEnv.txt             #当前尚未成功使用，从米尔科技官方uboot中取出
 
 2019.04.11
     清理u-boot目录：
