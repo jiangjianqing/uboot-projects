@@ -2,6 +2,10 @@
     ...待填充
 
 
+2019.04.13
+    重要：发现TI芯片支持让uboot从uEnv.txt读取环境变量
+        include/environment/ti/mmc.h:22:	"bootenvfile=uEnv.txt\0"
+        include/environment/ti/dfu.h:24:	"uEnv.txt fat 0 1\0"
  
 2019.04.12
     重要发现：
