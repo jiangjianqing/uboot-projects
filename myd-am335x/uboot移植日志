@@ -18,14 +18,14 @@
                     ...
                     :bl board_init_r
                         common/spl/spl.c : board_init_r()
-    开启DEBUG遇到问题：
+    在log.h中开启DEBUG遇到问题：
         arm-linux-gnueabihf-ld.bfd: u-boot-spl section `.rodata' will not fit in region `.sram'
         arm-linux-gnueabihf-ld.bfd: region `.sram' overflowed by 11364 bytes
         scripts/Makefile.spl:384: recipe for target 'spl/u-boot-spl' failed
         make[1]: *** [spl/u-boot-spl] Error 1    
-        #看起来是大小超出范围，因此无法使用DEBUG
+        #看起来是文件大小超出范围，因此无法使用DEBUG
     
-    使用debug串口：
+    使用debug串口（未成功）：
             在include/debug_uart.h 中定义了规则
                 /**
                  * debug_uart_init() - Set up the debug UART ready for use
@@ -73,8 +73,33 @@
          16646 2010f768 <board_init_r>:
          16647 2010f768:   e92d4010    push    {r4, lr}
 
+    将米尔科技官方提供的uboot编译后测试，确定上述代码差异不是问题，可以正常执行。
 
-    下一步计划：灭灯法测试spl执行流程，确保MLO文件已经被加载
+    成功启动spl的方法：
+        将米尔科技提供的u-boot中的board/myirtech  覆盖 board/ti   
+    
+    问题解决：
+        错误：
+            spl: could not find mmc device 0. error: -19
+        解决步骤：
+            1、CONFIG_DM_MMC=n           关闭MMC的dm驱动
+            2、CONFIG_MMC_OMAP_HS=y      启用传统驱动方式（u-boot-2019.04的方式，在u-boot2016.05中是CONFIG_OMAP_HSMMC）
+
+        错误：
+            fdt_record_loadable: FDT_ERR_BADMAGIC
+        解决步骤：
+            CONFIG_SPL_LOAD_FIT=n
+    
+        错误：
+            无法从tf卡上加载uboot，此时的分区linux下建立的
+        解决步骤：
+            到windows下用diskgenius重新分区，第一个分区设为fat32并设置为活动分区，大小为4g（大小看情况，后续分区再处理）
+    
+    解决上述问题后，在tf卡的活动fat32分区中放入以下四个文件，即可启动进入u-boot:
+        1、MLO                   #从u-boot-spl.bin转换而来
+        2、u-boot.img            #从u-boot.bin转换而来
+        3、*myd_y335x.dtb        #当前尚未成功使用，从米尔科技官方uboot中取出        
+        4、*uEnv.txt             #当前尚未成功使用，从米尔科技官方uboot中取出
 
 2019.04.11
     清理u-boot目录：
